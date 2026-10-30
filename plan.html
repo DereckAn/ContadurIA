@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ContadurIA — Plan del proyecto</title>
+<style>
+  :root {
+    --bg: #fafaf8; --surface: #ffffff; --tint: #f0efea;
+    --ink: #1c1c1a; --quiet: #5f5e5a; --line: #d6d4cc;
+    --accent: #2f6fd6; --accent-bg: #e6eefb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a19; --surface: #232321; --tint: #2a2a28;
+      --ink: #ecebe6; --quiet: #a6a49c; --line: #45443f;
+      --accent: #6ea0f0; --accent-bg: #1f2c42;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  h2 { font-size: 1.3rem; margin: 48px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 28px 0 6px; }
+  code { font-size: 0.9em; background: var(--tint); padding: 1px 4px; border-radius: 4px; }
+  .byline { color: var(--quiet); margin: 0 0 24px; }
+  .lead { font-size: 1.05rem; }
+  .table-wrap { overflow-x: auto; margin: 16px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--quiet); font-weight: 600; white-space: nowrap; }
+  ul.tasks { list-style: none; padding-left: 0; }
+  ul.tasks li::before { content: "☐  "; color: var(--quiet); }
+
+  /* Arquitectura */
+  .arch { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 12px; align-items: start; margin: 20px 0 8px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .col.group { background: var(--tint); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .col-title { font-weight: 600; color: var(--quiet); font-size: 0.9rem; text-align: center; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; text-align: center; }
+  .box b { display: block; font-size: 0.95rem; }
+  .box span { color: var(--quiet); font-size: 0.82rem; }
+  .box.main { background: var(--accent-bg); border: 2px solid var(--accent); }
+  .box.main span { color: var(--ink); }
+  .down { text-align: center; color: var(--quiet); line-height: 1; }
+  .arrow { align-self: center; color: var(--quiet); font-size: 1.4rem; }
+  @media (max-width: 680px) {
+    .arch { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); justify-self: center; }
+  }
+
+  /* Roadmap */
+  .roadmap { margin: 20px 0 8px; }
+  .phase { display: grid; grid-template-columns: 180px 1fr; gap: 16px; background: var(--surface);
+           border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .phase.main { background: var(--accent-bg); border: 2px solid var(--accent); }
+  .phase h3 { margin: 0; font-size: 1rem; }
+  .phase .when { color: var(--quiet); font-size: 0.85rem; }
+  .phase ul { margin: 0; padding-left: 18px; }
+  .gate { display: flex; align-items: center; gap: 10px; padding: 10px 0 10px 80px; color: var(--quiet); font-size: 0.88rem; }
+  .gate::before { content: ""; width: 12px; height: 12px; transform: rotate(45deg); border: 1.5px solid var(--quiet); background: var(--tint); flex: none; }
+  .gate.main { color: var(--ink); font-weight: 600; }
+  .gate.main::before { background: var(--accent); border-color: var(--accent); }
+  @media (max-width: 680px) {
+    .phase { grid-template-columns: 1fr; gap: 6px; }
+    .gate { padding-left: 16px; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>ContadurIA — Plan del proyecto</h1>
+<p class="byline">3 de noviembre de 2026 · Dereck Angeles</p>
+
+<!-- 1 -->
+<h2>Visión y objetivos</h2>
+<p class="lead">ContadurIA es un contador virtual en la web para personas en México: concentra todos tus datos financieros, los cruza con el SAT y te dice qué hacer cada mes para estar al corriente y pagar lo justo. Tú eres el primer usuario, pero se diseña multiusuario desde el día 1.</p>
+<p>Objetivos medibles del proyecto:</p>
+<ol>
+  <li><b>Cero sorpresas fiscales:</b> cada obligación (mensual y anual) detectada con al menos 7 días de anticipación.</li>
+  <li><b>Declaración anual lista en abril:</b> un expediente con todas las cifras, facturas y deducciones ya conciliadas.</li>
+  <li><b>Memoria total:</b> todo documento subido queda clasificado, buscable y ligado a su movimiento bancario o CFDI.</li>
+  <li><b>Informe mensual automático:</b> resumen de ingresos, gastos, deducibles, impuestos estimados y alertas.</li>
+  <li><b>Negociar con criterio:</b> cuando contrates a un contador humano, llegas con números verificados y sabes cuánto debería costar el servicio.</li>
+  <li><b>Primeros usuarios:</b> de 5 a 10 personas de prueba usando la app antes de la anual de abril 2027.</li>
+</ol>
+
+<!-- 2 -->
+<h2>Producto y competencia</h2>
+<p>Ya existen apps que declaran por ti; ContadurIA se diferencia por aconsejar sobre todas tus finanzas y por no guardar nunca tu e.firma.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Producto</th><th>Qué hace</th><th>Para quién</th><th>Precio de referencia</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://www.heru.app/">heru</a></td><td>Se conecta al SAT con tu e.firma, detecta deducciones con IA, hace mensuales y presenta la anual</td><td>Freelancers, plataformas digitales, negocios chicos</td><td><a href="https://www.heru.app/productos">$891–1,161 al año</a> + <a href="https://www.heru.app/declaracion-anual/">$1,499 la anual</a></td></tr>
+    <tr><td><a href="https://www.extruct.ai/hub/konta-com">Konta</a></td><td>Contabilidad y declaraciones en línea</td><td>Actividad empresarial</td><td>Desde ~$699 + IVA (dato posiblemente desactualizado)</td></tr>
+    <tr><td>Contpaqi, Aspel, Alegra</td><td>Software contable completo</td><td>Empresas y contadores</td><td>—</td></tr>
+  </tbody>
+</table></div>
+<p><b>Diferenciadores de ContadurIA:</b></p>
+<ul>
+  <li><b>Asesor, no sólo declarador:</b> bancos, propiedades, patrimonio, venta de inmuebles, PPR y un chat que explica con la ley en la mano.</li>
+  <li><b>Usuario objetivo desatendido:</b> personas con ingresos mixtos (sueldo + rentas + inmuebles) que quieren el máximo saldo a favor.</li>
+  <li><b>Segunda opinión:</b> revisar lo que hizo tu contador para que no te cobre de más.</li>
+  <li><b>Privacidad real:</b> la e.firma se usa sólo en tu navegador; el servidor nunca la recibe.</li>
+</ul>
+<p>El precio se define con la beta; heru es la referencia de lo que el mercado ya paga.</p>
+
+<!-- 3 -->
+<h2>Alcance y límites reales</h2>
+<p>Casi todo se puede automatizar; las excepciones son presentar declaraciones y firmar como contador certificado.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Fuente</th><th>Cómo se conecta</th><th>Automatización</th><th>Límite</th></tr></thead>
+  <tbody>
+    <tr><td>CFDI emitidos y recibidos (SAT)</td><td>Web service oficial de Descarga Masiva, firmado en el navegador con la e.firma</td><td>Al entrar o con un clic en "Sincronizar"</td><td>Requiere que el usuario entre y tenga su e.firma vigente</td></tr>
+    <tr><td>Constancia de situación fiscal y opinión de cumplimiento</td><td>El usuario la sube en PDF</td><td>Lectura automática</td><td>El portal del SAT no tiene API para esto</td></tr>
+    <tr><td>Declaraciones (mensuales y anual)</td><td>Portal del SAT</td><td>Preparación total, envío manual por el usuario</td><td>No hay API pública para presentar</td></tr>
+    <tr><td>Bancos y tarjetas</td><td>Estados de cuenta PDF/CSV o agregador (Belvo)</td><td>Alta</td><td>Open banking en México aún incompleto</td></tr>
+    <tr><td>Tickets y compras</td><td>Foto o PDF → extracción con IA</td><td>Alta</td><td>Un ticket sin CFDI casi nunca es deducible</td></tr>
+    <tr><td>Propiedades, negocios, créditos</td><td>Captura guiada + documentos</td><td>Manual al inicio</td><td>Datos que sólo el usuario tiene</td></tr>
+    <tr><td>Leyes (LISR, LIVA, CFF, RMF, LFT, IMSS)</td><td>Textos oficiales indexados para consulta</td><td>Actualización anual</td><td>La RMF cambia cada año</td></tr>
+  </tbody>
+</table></div>
+<p><b>Responsabilidad legal:</b> la IA no sustituye a un contador con cédula para dictámenes, defensas ante el SAT o firmas. Su papel es preparar, verificar y explicar; el usuario decide y presenta. Con usuarios reales hace falta aviso de privacidad, términos de uso y un contador aliado que respalde los criterios.</p>
+
+<!-- 4 -->
+<h2>Arquitectura y stack técnico</h2>
+<p>App web en Rust: el usuario sólo entra a su cuenta; la e.firma firma dentro de su navegador y el servidor hace todo lo demás.</p>
+
+<div class="arch" role="img" aria-label="La e.firma firma en el navegador; el servidor guarda, calcula y avisa">
+  <div class="col group">
+    <div class="col-title">Navegador del usuario</div>
+    <div class="box"><b>Interfaz web</b><span>Askama + HTMX</span></div>
+    <div class="box main"><b>Firma con e.firma</b><span>Rust → WebAssembly; la llave nunca sale</span></div>
+    <div class="box"><b>Subir archivos</b><span>Estados de cuenta y tickets</span></div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="col">
+    <div class="col-title">Servidor (Axum)</div>
+    <div class="box"><b>Login y API</b><span>Passkeys, un espacio por usuario</span></div>
+    <div class="down">↓</div>
+    <div class="box"><b>Reenvío al SAT</b><span>Sólo solicitudes ya firmadas</span></div>
+    <div class="down">↓</div>
+    <div class="box"><b>Postgres cifrado</b><span>Memoria de todo lo subido</span></div>
+    <div class="down">↓</div>
+    <div class="box"><b>Motor fiscal</b><span>Cálculos de ISR e IVA en código</span></div>
+    <div class="down">↓</div>
+    <div class="box"><b>Asistente IA (Claude)</b><span>Explica y cita la ley</span></div>
+    <div class="down">↑</div>
+    <div class="box"><b>Leyes y tablas oficiales</b><span>LISR, LIVA, CFF, RMF</span></div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="col group">
+    <div class="col-title">Lo que recibe el usuario</div>
+    <div class="box"><b>Informe mensual</b><span>PDF por correo</span></div>
+    <div class="box"><b>Alertas</b><span>Telegram y correo</span></div>
+    <div class="box"><b>Expediente anual</b><span>Listo para declarar</span></div>
+    <div class="box"><b>Chat contador</b><span>Preguntas con respuesta</span></div>
+  </div>
+</div>
+
+<h3>Cómo se usa la e.firma sin subirla</h3>
+<ol>
+  <li>El usuario abre su <code>.cer</code> y <code>.key</code> en el navegador y escribe su contraseña; nada de eso se envía.</li>
+  <li>Un módulo de Rust compilado a WebAssembly firma la solicitud de descarga dentro del navegador.</li>
+  <li>El servidor sólo reenvía esa solicitud firmada al SAT y guarda los CFDI que regresan.</li>
+  <li>Desde ahí, el análisis, los informes y las alertas corren en el servidor aunque el usuario no esté conectado.</li>
+</ol>
+<p>El costo: la descarga de CFDI ocurre cuando el usuario entra, no sola de madrugada. Una opción posterior es guardar la e.firma cifrada sólo para quien lo autorice expresamente.</p>
+
+<h3>Stack</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Pieza</th><th>Tecnología</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td>Lenguaje</td><td>Rust (cargo)</td><td>Tipos estrictos para dinero; un binario; compila también a WebAssembly</td></tr>
+    <tr><td>Backend</td><td>Axum + Tokio</td><td>El framework web de Rust más usado y documentado</td></tr>
+    <tr><td>Frontend</td><td>Askama + HTMX + Pico CSS</td><td>Páginas desde el servidor, sin framework JS; Leptos después si hace falta</td></tr>
+    <tr><td>Gráficas</td><td>Chart.js</td><td>Gastos, ingresos e impuestos por mes</td></tr>
+    <tr><td>Firma en el navegador</td><td>Rust → WebAssembly (<code>wasm-bindgen</code> + crates de RustCrypto)</td><td>La e.firma nunca sale del equipo del usuario</td></tr>
+    <tr><td>Cliente del SAT</td><td>Propio (SOAP + XML firmado)</td><td>No existe en Rust; candidato a librería abierta</td></tr>
+    <tr><td>Base de datos</td><td>Postgres + <code>sqlx</code></td><td>Multiusuario, consultas verificadas al compilar, aislamiento por usuario</td></tr>
+    <tr><td>Documentos</td><td>Cloudflare R2, cifrados por usuario</td><td>Almacenamiento barato compatible con S3</td></tr>
+    <tr><td>IA y lectura de PDFs/fotos</td><td>API de Claude vía <code>reqwest</code></td><td>Extracción, explicación y chat; no hay SDK oficial en Rust</td></tr>
+    <tr><td>Login</td><td>Passkeys (<code>webauthn-rs</code>) + contraseña con argon2</td><td>Sin contraseñas débiles para datos fiscales</td></tr>
+    <tr><td>Tareas en segundo plano</td><td><code>apalis</code> sobre Postgres</td><td>Informes mensuales, alertas y procesos largos</td></tr>
+    <tr><td>Informe en PDF</td><td>Typst</td><td>PDFs con buen diseño desde Rust</td></tr>
+    <tr><td>Notificaciones</td><td><code>teloxide</code> (Telegram) + <code>lettre</code> (correo)</td><td>Avisos donde el usuario sí los ve</td></tr>
+    <tr><td>Hosting</td><td>Fly.io o VPS de Hetzner</td><td>Unos USD 10–30 al mes al inicio</td></tr>
+  </tbody>
+</table></div>
+
+<!-- 5 -->
+<h2>Seguridad y privacidad</h2>
+<p>Con datos fiscales de otras personas, la seguridad es parte del producto: la e.firma nunca llega al servidor y cada usuario está aislado.</p>
+<ul>
+  <li><b>e.firma:</b> sólo vive en el navegador del usuario; el servidor recibe solicitudes ya firmadas.</li>
+  <li><b>Aislamiento:</b> cada usuario ve sólo lo suyo, reforzado en la base con row-level security de Postgres.</li>
+  <li><b>Cifrado:</b> HTTPS siempre; base y documentos cifrados en reposo; respaldos cifrados.</li>
+  <li><b>Lo que ve la IA:</b> sólo los datos necesarios para cada pregunta. RFC, CURP y números de cuenta se enmascaran cuando no hacen falta. API de Claude con retención cero de datos.</li>
+  <li><b>Acceso:</b> passkeys o contraseña fuerte con 2FA. El bot de Telegram sólo responde a la cuenta vinculada.</li>
+  <li><b>Bitácora:</b> registro de accesos y de cada sincronización con el SAT, visible para el usuario.</li>
+  <li><b>LFPDPPP:</b> aviso de privacidad, derechos ARCO y botón para borrar la cuenta y todos sus datos.</li>
+</ul>
+
+<!-- 6 -->
+<h2>Fases y roadmap</h2>
+<p>Unos cinco meses para tener la app funcionando contigo y con una beta pequeña, justo a tiempo para la declaración anual de abril 2027. Las semanas incluyen la curva de aprendizaje de Rust.</p>
+
+<div class="roadmap">
+  <div class="phase">
+    <div><h3>Fase 0 · Cimientos</h3><div class="when">Semanas 1 a 3 (nov 2026)</div></div>
+    <ul>
+      <li>Rust básico; proyecto Axum + Postgres + Askama/HTMX</li>
+      <li>Cuentas de usuario con passkeys, multiusuario desde el inicio</li>
+      <li>Perfil fiscal y calendario de obligaciones según régimen</li>
+    </ul>
+  </div>
+  <div class="gate">Listo: crear cuenta, entrar y ver tu calendario fiscal</div>
+  <div class="phase">
+    <div><h3>Fase 1 · MVP</h3><div class="when">Semanas 4 a 9</div></div>
+    <ul>
+      <li>Firma con e.firma en el navegador (WebAssembly) y descarga de CFDI</li>
+      <li>Subir estados de cuenta y tickets; lectura y clasificación con IA</li>
+      <li>Conciliación, informe mensual por correo y avisos por Telegram</li>
+    </ul>
+  </div>
+  <div class="gate">Listo: tu primer informe mensual real (enero 2027)</div>
+  <div class="phase main">
+    <div><h3>Fase 2 · Contador</h3><div class="when">Semanas 10 a 15</div></div>
+    <ul>
+      <li>Motor fiscal: ISR, IVA, retenciones y pagos provisionales</li>
+      <li>Cazador de deducciones, facturas faltantes y validador de CFDI</li>
+      <li>Detector de discrepancias SAT y expediente anual exportable</li>
+    </ul>
+  </div>
+  <div class="gate main">Listo: tu anual 2026 cuadrada y revisada, antes de abril 2027</div>
+  <div class="phase">
+    <div><h3>Fase 3 · Beta</h3><div class="when">Semanas 16 a 20 (mar 2027)</div></div>
+    <ul>
+      <li>5 a 10 usuarios de prueba con ingresos mixtos, justo antes de su anual</li>
+      <li>Aviso de privacidad, términos de uso y contador aliado</li>
+      <li>Segunda opinión: comparar la declaración de su contador</li>
+    </ul>
+  </div>
+  <div class="gate">Listo: decidir precio y si se abre al público</div>
+  <div class="phase">
+    <div><h3>Fase 4 · Asesor</h3><div class="when">Después</div></div>
+    <ul>
+      <li>Chat contador con leyes indexadas y citas al artículo</li>
+      <li>Simulador de escenarios, optimizador de PPR, patrimonio e inmuebles</li>
+      <li>Publicar el cliente del SAT en Rust como librería abierta</li>
+    </ul>
+  </div>
+</div>
+<p>Cada fase se cierra sólo cuando cumple su criterio de salida; las semanas asumen trabajo de medio tiempo y pueden moverse.</p>
+
+<!-- 7 -->
+<h2>Ideas extra que agregan valor</h2>
+<p>Las ideas de mayor valor son las que convierten dinero perdido en dinero recuperado: deducciones olvidadas, saldos a favor y facturas faltantes.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Idea</th><th>Qué hace</th><th>Por qué vale</th><th>Fase</th></tr></thead>
+  <tbody>
+    <tr><td>Calendario de obligaciones</td><td>Fechas del día 17, anual, predial, tenencia, e.firma y CSD por vencer</td><td>Cero recargos</td><td>0</td></tr>
+    <tr><td>Bot de Telegram</td><td>Avisos de vencimientos y facturas faltantes; responde preguntas rápidas</td><td>Los ves a tiempo</td><td>1</td></tr>
+    <tr><td>Cazador de deducciones</td><td>Detecta gastos deducibles (médicos, colegiaturas, intereses hipotecarios, PPR, seguros) y avisa si falta su CFDI</td><td>Dinero recuperado en la anual</td><td>2</td></tr>
+    <tr><td>Facturas faltantes</td><td>Cruza cada cargo bancario contra los CFDI; si no hay factura, recuerda pedirla antes de que venza el plazo del comercio</td><td>Muchos comercios sólo facturan en el mismo mes</td><td>2</td></tr>
+    <tr><td>Detector de discrepancias SAT</td><td>Compara lo que el SAT ve (CFDI, depósitos en efectivo, retenciones) contra lo que se declara</td><td>Evita cartas invitación y multas</td><td>2</td></tr>
+    <tr><td>Validador de CFDI</td><td>Revisa RFC, uso de CFDI, régimen y forma de pago de cada factura recibida</td><td>Una factura mal emitida no es deducible</td><td>2</td></tr>
+    <tr><td>Expediente para el contador</td><td>Exporta un paquete (PDF y Excel) con todo lo del año</td><td>El contador cobra menos por menos trabajo</td><td>2</td></tr>
+    <tr><td>Segunda opinión</td><td>Compara la declaración que hizo tu contador contra tus datos</td><td>Detecta errores y cobros de más</td><td>3</td></tr>
+    <tr><td>Chat contador</td><td>Preguntas en lenguaje natural con citas al artículo de la ley</td><td>Entiendes el porqué</td><td>4</td></tr>
+    <tr><td>Simulador de escenarios</td><td>¿Me conviene RESICO o actividad empresarial? ¿Aportar al PPR? ¿Vender o rentar el departamento?</td><td>Decisiones con números, no con intuición</td><td>4</td></tr>
+    <tr><td>Optimizador de anual</td><td>Calcula cuánto aportar al PPR antes del 31 de diciembre para maximizar el saldo a favor</td><td>Ahorro fiscal directo</td><td>4</td></tr>
+    <tr><td>Patrimonio neto</td><td>Bienes, deudas, inversiones y su evolución mensual</td><td>Visión completa, no sólo impuestos</td><td>4</td></tr>
+    <tr><td>Ganancia por venta de inmuebles</td><td>Calcula ISR con costo actualizado por INPC y exención de casa habitación</td><td>Evita pagar de más al notario</td><td>4</td></tr>
+    <tr><td>Librería SAT abierta en Rust</td><td>Publicar el cliente de Descarga Masiva como crate</td><td>Visibilidad y confianza; no existe hoy</td><td>4</td></tr>
+    <tr><td>Modo contador</td><td>Contadores usan la app para atender a sus clientes</td><td>Segundo mercado que paga</td><td>Después</td></tr>
+    <tr><td>Modo familia</td><td>Varios RFC (pareja, hijos con ingresos) en una sola cuenta</td><td>Planear en conjunto</td><td>Después</td></tr>
+    <tr><td>Presupuesto y gastos hormiga</td><td>Categoriza gastos y detecta suscripciones olvidadas</td><td>Ahorro mensual</td><td>Después</td></tr>
+  </tbody>
+</table></div>
+
+<!-- 8 -->
+<h2>Riesgos, decisiones pendientes y siguiente paso</h2>
+<p>El mayor riesgo es confiar en un cálculo equivocado; por eso cada cifra lleva su fuente y su artículo de ley.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Riesgo</th><th>Mitigación</th></tr></thead>
+  <tbody>
+    <tr><td>La IA da un cálculo o criterio fiscal erróneo</td><td>Los impuestos se calculan con código y tablas oficiales, no con la IA; la IA sólo explica. Contador aliado revisa los criterios</td></tr>
+    <tr><td>Filtración de datos de usuarios</td><td>e.firma nunca en el servidor, aislamiento por usuario, cifrado, bitácora, pruebas de seguridad antes de la beta</td></tr>
+    <tr><td>Responsabilidad legal con datos ajenos</td><td>Aviso de privacidad, términos de uso, no presentar declaraciones por otros al inicio</td></tr>
+    <tr><td>La curva de Rust retrasa el proyecto</td><td>Askama + HTMX en lugar de Leptos; empezar por lo que usas tú</td></tr>
+    <tr><td>La firma XML del SAT en Rust es difícil</td><td>Validar contra la librería satcfdi de Python como referencia</td></tr>
+    <tr><td>Competencia de heru</td><td>No competir en declarar; diferenciarse en asesoría, segunda opinión y privacidad</td></tr>
+    <tr><td>El SAT cambia su servicio o portal</td><td>Descarga Masiva es oficial y estable; lo demás por subida manual de PDFs</td></tr>
+    <tr><td>Leyes desactualizadas</td><td>Recarga anual de la RMF y tablas de ISR cada enero</td></tr>
+  </tbody>
+</table></div>
+<p><b>Decisiones pendientes:</b></p>
+<ul class="tasks">
+  <li>¿Cuál es tu régimen fiscal (sueldos, RESICO, actividad empresarial, arrendamiento, varios)?</li>
+  <li>¿Qué bancos y tarjetas usas?</li>
+  <li>¿Estados de cuenta subidos a mano o agregador bancario de pago?</li>
+  <li>¿Hosting en Fly.io o VPS de Hetzner?</li>
+  <li>¿La beta es gratis a cambio de retroalimentación?</li>
+</ul>
+<p><b>Siguiente paso:</b> Fase 0, empezando por el esqueleto de Axum + Postgres con login de usuarios.</p>
+
+<p class="byline" style="margin-top:32px">Fuentes de competencia: <a href="https://www.heru.app/">heru.app</a>, <a href="https://www.heru.app/productos">precios de heru</a>, <a href="https://www.heru.app/declaracion-anual/">anual de heru</a>, <a href="https://www.extruct.ai/hub/konta-com">Konta</a>.</p>
+
+</main>
+</body>
+</html>
