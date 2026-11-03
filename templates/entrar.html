@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block contenido %}
+<article style="max-width:28rem;margin:2rem auto">
+  <h1>Entrar</h1>
+  <p>Usa una passkey: tu huella, tu cara o el PIN de tu dispositivo. Sin contraseñas.</p>
+  <form id="acceso">
+    <label>
+      Correo
+      <input type="email" name="correo" required autocomplete="username webauthn">
+    </label>
+    <button type="submit" value="acceso">Entrar</button>
+    <button type="submit" value="registro" class="secondary">Crear cuenta</button>
+  </form>
+  <p id="mensaje" role="alert"></p>
+</article>
+<script src="/passkey.js"></script>
+{% endblock %}

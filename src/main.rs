@@ -1,0 +1,93 @@
+mod auth;
+mod calendario;
+mod perfil;
+
+use std::sync::Arc;
+
+use axum::{
+    Router,
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+};
+use sqlx::PgPool;
+use tower_sessions::{Expiry, SessionManagerLayer, cookie::time::Duration, session_store::ExpiredDeletion};
+use tower_sessions_sqlx_store::PostgresStore;
+use webauthn_rs::prelude::{Url, Webauthn, WebauthnBuilder};
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+    pub webauthn: Arc<Webauthn>,
+}
+
+/// Error de un handler: el mensaje se muestra al usuario tal cual.
+pub struct AppError(pub StatusCode, pub String);
+
+impl AppError {
+    pub fn usuario(msg: &str) -> Self {
+        AppError(StatusCode::BAD_REQUEST, msg.into())
+    }
+}
+
+/// Cualquier error inesperado (base de datos, sesión...) se registra y se oculta al usuario.
+impl<E: std::fmt::Display> From<E> for AppError {
+    fn from(e: E) -> Self {
+        eprintln!("error: {e}");
+        AppError(StatusCode::INTERNAL_SERVER_ERROR, "Error interno, intenta de nuevo.".into())
+    }
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        (self.0, self.1).into_response()
+    }
+}
+
+fn var(nombre: &str, defecto: &str) -> String {
+    std::env::var(nombre).unwrap_or_else(|_| defecto.into())
+}
+
+#[tokio::main]
+async fn main() {
+    let app_url = var("APP_URL", "http://localhost:3000");
+    let origen = Url::parse(&app_url).expect("APP_URL no es una URL válida");
+    let rp_id = origen.domain().expect("APP_URL necesita un dominio").to_owned();
+    let webauthn = WebauthnBuilder::new(&rp_id, &origen)
+        .and_then(|b| b.rp_name("ContadurIA").build())
+        .expect("configuración de passkeys inválida");
+
+    let db = PgPool::connect(&var("DATABASE_URL", "postgres://contaduria:contaduria@localhost/contaduria"))
+        .await
+        .expect("no se pudo conectar a Postgres");
+    sqlx::migrate!().run(&db).await.expect("falló una migración");
+
+    let sesiones = PostgresStore::new(db.clone());
+    sesiones.migrate().await.expect("no se pudo crear la tabla de sesiones");
+    tokio::spawn(sesiones.clone().continuously_delete_expired(tokio::time::Duration::from_secs(3600)));
+
+    let app = Router::new()
+        .route("/", get(perfil::inicio))
+        .route("/perfil", get(perfil::ver).post(perfil::guardar))
+        .route("/entrar", get(auth::pagina))
+        .route("/salir", post(auth::salir))
+        .route("/auth/registro/inicio", post(auth::registro_inicio))
+        .route("/auth/registro/fin", post(auth::registro_fin))
+        .route("/auth/acceso/inicio", post(auth::acceso_inicio))
+        .route("/auth/acceso/fin", post(auth::acceso_fin))
+        .route(
+            "/passkey.js",
+            get(|| async { ([(header::CONTENT_TYPE, "text/javascript")], include_str!("../static/passkey.js")) }),
+        )
+        .layer(
+            SessionManagerLayer::new(sesiones)
+                .with_secure(origen.scheme() == "https")
+                .with_expiry(Expiry::OnInactivity(Duration::days(7))),
+        )
+        .with_state(AppState { db, webauthn: Arc::new(webauthn) });
+
+    let direccion = var("BIND", "127.0.0.1:3000");
+    let listener = tokio::net::TcpListener::bind(&direccion).await.expect("no se pudo abrir el puerto");
+    println!("ContadurIA en {app_url}");
+    axum::serve(listener, app).await.unwrap();
+}

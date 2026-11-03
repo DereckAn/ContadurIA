@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ContadurIA</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css">
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul><li><strong>ContadurIA</strong></li></ul>
+      {% block menu %}{% endblock %}
+    </nav>
+  </header>
+  <main class="container">
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

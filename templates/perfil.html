@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Perfil fiscal</h1>
+{% if let Some(e) = error %}
+<p role="alert"><mark>{{ e }}</mark></p>
+{% endif %}
+<form method="post">
+  <label>
+    Nombre
+    <input name="nombre" value="{{ perfil.nombre }}" required maxlength="200">
+  </label>
+  <label>
+    RFC
+    <input name="rfc" value="{{ perfil.rfc }}" required minlength="13" maxlength="13"
+           placeholder="XAXX010101000" style="text-transform:uppercase">
+  </label>
+  <fieldset>
+    <legend>Regímenes fiscales</legend>
+    {% for (codigo, nombre) in regimenes %}
+    <label>
+      <input type="checkbox" name="regimenes" value="{{ codigo }}" {% if perfil.tiene(codigo) %}checked{% endif %}>
+      {{ codigo }} · {{ nombre }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  <label>
+    Vencimiento de tu e.firma (opcional)
+    <input type="date" name="efirma_vence" value="{{ perfil.efirma_valor() }}">
+  </label>
+  <button type="submit">Guardar</button>
+</form>
+{% endblock %}

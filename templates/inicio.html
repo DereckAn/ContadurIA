@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Hola, {{ nombre }}</h1>
+<p>Tus próximas obligaciones fiscales según tu régimen.</p>
+<div class="overflow-auto">
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Obligación</th><th>Detalle</th></tr>
+    </thead>
+    <tbody>
+      {% for o in obligaciones %}
+      <tr>
+        <td>{{ o.fecha_texto() }}<br><small>{{ o.faltan_texto() }}</small></td>
+        <td>{{ o.titulo }}</td>
+        <td>{{ o.detalle }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><small>Si la fecha cae en fin de semana se recorre al siguiente día hábil. Aún no considera días feriados ni los días adicionales por RFC.</small></p>
+{% endblock %}
