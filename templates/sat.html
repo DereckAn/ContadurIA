@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Sincronizar con el SAT</h1>
+<p>Descarga tus CFDI emitidos y recibidos con tu e.firma. <strong>Tu e.firma se abre sólo en este navegador; nunca se envía al servidor.</strong></p>
+
+<article>
+  <form id="efirma" data-rfc="{{ rfc }}">
+    <div class="grid">
+      <label>Certificado (.cer) <input type="file" name="cer" accept=".cer" required></label>
+      <label>Llave privada (.key) <input type="file" name="key" accept=".key" required></label>
+    </div>
+    <label>Contraseña de la e.firma <input type="password" name="contrasena" required autocomplete="off"></label>
+    <button type="submit">Abrir e.firma y sincronizar</button>
+  </form>
+  <ul id="bitacora" aria-live="polite"></ul>
+  <small>El SAT tarda de minutos a horas en preparar los paquetes. Deja esta página abierta y revisará cada 2 minutos, o vuelve más tarde.</small>
+</article>
+
+<h2>Solicitudes</h2>
+<p>{{ total_cfdi }} CFDI guardados. <a href="/cfdi">Ver CFDI</a></p>
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Tipo</th><th>Periodo</th><th>Estado</th><th>Mensaje</th></tr></thead>
+    <tbody>
+      {% for s in solicitudes %}
+      <tr><td>{{ s.tipo }}</td><td>{{ s.periodo() }}</td><td>{{ s.estado }}</td><td>{{ s.mensaje }}</td></tr>
+      {% else %}
+      <tr><td colspan="4">Aún no hay solicitudes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script type="module" src="/static/sat.js"></script>
+{% endblock %}

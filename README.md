@@ -2,7 +2,7 @@
 
 Contador virtual para personas en México. El plan completo está en [`plan.html`](plan.html).
 
-**Estado:** Fase 0 — cuentas con passkeys, perfil fiscal y calendario de obligaciones.
+**Estado:** Fase 1 en curso — cuentas con passkeys, perfil fiscal, calendario y descarga de CFDI del SAT.
 
 ## Correr en local
 
@@ -13,6 +13,11 @@ Requisitos: Rust 1.85+ y Docker.
 docker run -d --name contaduria-db \
   -e POSTGRES_USER=contaduria -e POSTGRES_PASSWORD=contaduria -e POSTGRES_DB=contaduria \
   -p 127.0.0.1:5432:5432 -v contaduria-db:/var/lib/postgresql/data postgres:17
+
+# e.firma en WebAssembly (una sola vez y cada vez que cambie efirma/)
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130 --locked
+./build-wasm.sh
 
 cargo run
 ```
@@ -40,7 +45,14 @@ src/main.rs        arranque, rutas, sesiones
 src/auth.rs        crear cuenta y entrar con passkeys
 src/perfil.rs      perfil fiscal e inicio
 src/calendario.rs  obligaciones por régimen (con pruebas)
+src/sat.rs         Descarga Masiva: reenvía al SAT mensajes ya firmados
+src/cfdi.rs        lectura de CFDI y paquetes .zip
+efirma/            e.firma en el navegador (Rust → WebAssembly)
 templates/         páginas (Askama + Pico CSS)
-static/passkey.js  WebAuthn en el navegador
+static/            JavaScript del navegador
 migrations/        esquema de Postgres
 ```
+
+Los mensajes al SAT se prueban contra los de
+[phpcfdi/sat-ws-descarga-masiva](https://github.com/phpcfdi/sat-ws-descarga-masiva) (MIT),
+con su e.firma de pruebas `EKU9003173C9` en `efirma/pruebas/`.

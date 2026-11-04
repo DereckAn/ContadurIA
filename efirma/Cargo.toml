@@ -1,0 +1,17 @@
+[package]
+name = "efirma"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+base64 = "0.23.1"
+# Sólo para que compile a wasm; la firma RSA PKCS#1 v1.5 no usa aleatorios.
+getrandom = { version = "0.2", features = ["js"] }
+pkcs8 = { version = "0.10", features = ["encryption", "3des", "sha1-insecure"] }
+rsa = { version = "0.9", features = ["sha1"] }
+sha1 = "0.10"
+wasm-bindgen = "0.2.130"
+x509-cert = "0.2"

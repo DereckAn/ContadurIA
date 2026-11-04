@@ -1,16 +1,20 @@
 mod auth;
 mod calendario;
+mod cfdi;
 mod perfil;
+mod sat;
 
 use std::sync::Arc;
 
 use axum::{
     Router,
-    http::{StatusCode, header},
+    http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use sqlx::PgPool;
+use time::{OffsetDateTime, PrimitiveDateTime, macros::offset};
+use tower_http::services::ServeDir;
 use tower_sessions::{Expiry, SessionManagerLayer, cookie::time::Duration, session_store::ExpiredDeletion};
 use tower_sessions_sqlx_store::PostgresStore;
 use webauthn_rs::prelude::{Url, Webauthn, WebauthnBuilder};
@@ -19,6 +23,14 @@ use webauthn_rs::prelude::{Url, Webauthn, WebauthnBuilder};
 pub struct AppState {
     pub db: PgPool,
     pub webauthn: Arc<Webauthn>,
+    pub http: reqwest::Client,
+}
+
+/// Fecha y hora actuales en el centro de México, sin fracciones de segundo.
+// ponytail: UTC-6 fijo (sin horario de verano desde 2022); zona por usuario si hay usuarios en otros husos.
+pub fn ahora_mx() -> PrimitiveDateTime {
+    let t = OffsetDateTime::now_utc().to_offset(offset!(-6));
+    PrimitiveDateTime::new(t.date(), t.time().replace_nanosecond(0).unwrap())
 }
 
 /// Error de un handler: el mensaje se muestra al usuario tal cual.
@@ -75,16 +87,24 @@ async fn main() {
         .route("/auth/registro/fin", post(auth::registro_fin))
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
-        .route(
-            "/passkey.js",
-            get(|| async { ([(header::CONTENT_TYPE, "text/javascript")], include_str!("../static/passkey.js")) }),
-        )
+        .route("/cfdi", get(cfdi::pagina))
+        .route("/sat", get(sat::pagina))
+        .route("/sat/pendientes", get(sat::pendientes))
+        .route("/sat/enviar", post(sat::enviar))
+        .nest_service("/static", ServeDir::new("static"))
         .layer(
             SessionManagerLayer::new(sesiones)
                 .with_secure(origen.scheme() == "https")
                 .with_expiry(Expiry::OnInactivity(Duration::days(7))),
         )
-        .with_state(AppState { db, webauthn: Arc::new(webauthn) });
+        .with_state(AppState {
+            db,
+            webauthn: Arc::new(webauthn),
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .build()
+                .expect("cliente HTTP"),
+        });
 
     let direccion = var("BIND", "127.0.0.1:3000");
     let listener = tokio::net::TcpListener::bind(&direccion).await.expect("no se pudo abrir el puerto");

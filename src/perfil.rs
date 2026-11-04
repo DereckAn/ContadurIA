@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::extract::Form;
 use serde::Deserialize;
 use sqlx::PgPool;
-use time::{Date, Duration, OffsetDateTime, macros::format_description};
+use time::{Date, macros::format_description};
 use uuid::Uuid;
 
 use crate::{
@@ -54,8 +54,7 @@ pub async fn inicio(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
     let Some(p) = cargar(&st.db, id).await? else {
         return Ok(Redirect::to("/perfil").into_response());
     };
-    // ponytail: hora del centro de México fija (UTC-6, sin horario de verano desde 2022); zona por usuario si hay usuarios en otros husos.
-    let hoy = (OffsetDateTime::now_utc() - Duration::hours(6)).date();
+    let hoy = crate::ahora_mx().date();
     let obligaciones = obligaciones(&p.regimenes, p.efirma_vence, hoy, 90);
     Ok(Inicio { nombre: p.nombre, obligaciones }.into_response())
 }
