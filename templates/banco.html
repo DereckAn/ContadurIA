@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Movimientos del banco</h1>
+<p>Sube tu estado de cuenta en PDF. Se lee en tu propia máquina con un modelo local; nada se envía a internet.</p>
+
+<article>
+  <form method="post" action="/banco/subir" enctype="multipart/form-data">
+    <label>Estado de cuenta (.pdf)
+      <input type="file" name="pdf" accept="application/pdf" required>
+    </label>
+    <button type="submit">Subir y leer</button>
+  </form>
+  <small>La lectura puede tardar uno o dos minutos mientras el modelo procesa el PDF.</small>
+</article>
+
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Fecha</th><th>Descripción</th><th>RFC</th><th style="text-align:right">Cargo</th><th style="text-align:right">Abono</th><th>CFDI</th></tr></thead>
+    <tbody>
+      {% for f in filas %}
+      <tr>
+        <td>{{ f.fecha_texto() }}</td>
+        <td>{{ f.descripcion }}</td>
+        <td>{{ f.rfc_texto() }}</td>
+        <td style="text-align:right">{{ f.cargo_texto() }}</td>
+        <td style="text-align:right">{{ f.abono_texto() }}</td>
+        <td>{% if f.conciliado() %}✓{% else %}—{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Aún no hay movimientos. Sube un estado de cuenta arriba.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

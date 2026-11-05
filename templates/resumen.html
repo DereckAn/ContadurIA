@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Resumen {{ anio }}</h1>
+
+<div class="grid">
+  <article><hgroup><h3>{{ ingresos }}</h3><p>Ingresos facturados</p></hgroup></article>
+  <article><hgroup><h3>{{ gastos }}</h3><p>Gastos facturados</p></hgroup></article>
+  <article><hgroup><h3>{{ balance }}</h3><p>Balance</p></hgroup></article>
+</div>
+
+<h2>IVA</h2>
+<div class="grid">
+  <article><hgroup><h3>{{ iva_trasladado }}</h3><p>IVA cobrado (trasladado)</p></hgroup></article>
+  <article><hgroup><h3>{{ iva_acreditable }}</h3><p>IVA pagado (acreditable)</p></hgroup></article>
+  <article><hgroup><h3>{{ iva_por_pagar }}</h3><p>Diferencia</p></hgroup></article>
+</div>
+
+<h2>Por mes</h2>
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Gastos</th><th style="text-align:right">Balance</th></tr></thead>
+    <tbody>
+      {% for m in meses %}
+      <tr>
+        <td>{{ m.nombre() }}</td>
+        <td style="text-align:right">{{ m.ingresos_texto() }}</td>
+        <td style="text-align:right">{{ m.gastos_texto() }}</td>
+        <td style="text-align:right">{{ m.balance_texto() }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Aún no hay CFDI de {{ anio }}. <a href="/sat">Sincroniza con el SAT</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><small>Calculado desde tus CFDI de ingreso. No incluye notas de crédito, nómina ni complementos de pago, ni es un cálculo oficial de impuestos.</small></p>
+{% endblock %}

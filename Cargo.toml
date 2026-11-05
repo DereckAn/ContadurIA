@@ -6,10 +6,10 @@ edition = "2024"
 [dependencies]
 askama = "0.16"
 askama_web = { version = "0.16", features = ["axum-0.8"] }
-axum = "0.8"
+axum = { version = "0.8", features = ["multipart"] }
 axum-extra = { version = "0.12", features = ["form"] }
 base64 = "0.23.1"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 roxmltree = "0.21.2"
 rust_decimal = "1.43.0"
 serde = { version = "1.0.229", features = ["derive"] }

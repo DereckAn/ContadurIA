@@ -1,7 +1,9 @@
 mod auth;
+mod banco;
 mod calendario;
 mod cfdi;
 mod perfil;
+mod resumen;
 mod sat;
 
 use std::sync::Arc;
@@ -56,7 +58,7 @@ impl IntoResponse for AppError {
     }
 }
 
-fn var(nombre: &str, defecto: &str) -> String {
+pub fn var(nombre: &str, defecto: &str) -> String {
     std::env::var(nombre).unwrap_or_else(|_| defecto.into())
 }
 
@@ -87,6 +89,9 @@ async fn main() {
         .route("/auth/registro/fin", post(auth::registro_fin))
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
+        .route("/resumen", get(resumen::pagina))
+        .route("/banco", get(banco::pagina))
+        .route("/banco/subir", post(banco::subir))
         .route("/cfdi", get(cfdi::pagina))
         .route("/sat", get(sat::pagina))
         .route("/sat/pendientes", get(sat::pendientes))
