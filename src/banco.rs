@@ -10,7 +10,9 @@ use askama_web::WebTemplate;
 use axum::{extract::{Multipart, State}, response::{IntoResponse, Redirect, Response}};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use time::{Date, macros::format_description};
+use uuid::Uuid;
 
 use crate::{AppError, AppState, auth::Usuario};
 
@@ -338,6 +340,60 @@ async fn extraer_llm(st: &AppState, texto: &str) -> Result<Vec<Movimiento>, AppE
         .collect())
 }
 
+// --- Conciliación: casar movimientos del banco con CFDI por RFC, monto y fecha ---
+
+/// Marca cada movimiento sin conciliar que tenga un CFDI del mismo RFC, mismo monto y
+/// fecha a ±5 días. Devuelve cuántos se conciliaron.
+// ponytail: emparejado simple; si hay dos cargos idénticos al mismo RFC pueden apuntar al
+// mismo CFDI. Un emparejado 1-a-1 estricto se agrega si aparece el caso.
+pub async fn conciliar(db: &PgPool, id: Uuid) -> Result<u64, AppError> {
+    // Pasada 1 (fuerte): mismo RFC (como emisor o receptor del CFDI), mismo monto, fecha ±5 días.
+    // Sirve para compras con tarjeta, donde el estado de cuenta sí trae "RFC:".
+    let por_rfc = sqlx::query(
+        "UPDATE movimientos m SET cfdi_uuid = c.uuid
+         FROM cfdis c
+         WHERE m.usuario_id = $1 AND m.cfdi_uuid IS NULL AND m.rfc IS NOT NULL
+           AND c.usuario_id = $1 AND c.total = COALESCE(m.cargo, m.abono)
+           AND (c.emisor_rfc = m.rfc OR c.receptor_rfc = m.rfc)
+           AND ABS(c.fecha::date - m.fecha) <= 5",
+    )
+    .bind(id)
+    .execute(db)
+    .await?
+    .rows_affected();
+
+    // Pasada 2: por monto y fecha ±3 días, solo cuando hay UN único CFDI candidato (evita
+    // emparejar al azar). Caza nómina e inversiones, que llegan por SPEI sin RFC en el banco.
+    // ponytail: no garantiza que un CFDI se use una sola vez; basta mientras los montos sean
+    // distintivos. Emparejado 1-a-1 estricto si aparece el caso.
+    let por_monto = sqlx::query(
+        "UPDATE movimientos m SET cfdi_uuid = sub.uuid
+         FROM (
+            SELECT m.id AS mid, min(c.uuid::text) AS uuid
+            FROM movimientos m
+            JOIN cfdis c ON c.usuario_id = m.usuario_id
+                        AND c.total = COALESCE(m.cargo, m.abono)
+                        AND c.total > 0
+                        AND ABS(c.fecha::date - m.fecha) <= 3
+            WHERE m.usuario_id = $1 AND m.cfdi_uuid IS NULL
+            GROUP BY m.id
+            HAVING count(*) = 1
+         ) sub
+         WHERE m.id = sub.mid",
+    )
+    .bind(id)
+    .execute(db)
+    .await?
+    .rows_affected();
+
+    Ok(por_rfc + por_monto)
+}
+
+pub async fn conciliar_handler(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Response, AppError> {
+    conciliar(&st.db, id).await?;
+    Ok(Redirect::to("/banco").into_response())
+}
+
 // --- Handlers ---
 
 pub async fn subir(
@@ -390,6 +446,7 @@ pub async fn subir(
         guardados += 1;
     }
     tx.commit().await?;
+    conciliar(&st.db, id).await?;
     eprintln!("banco: {guardados} movimientos de {archivo}");
     Ok(Redirect::to("/banco").into_response())
 }
@@ -426,6 +483,8 @@ impl Fila {
 #[template(path = "banco.html")]
 pub struct Pagina {
     filas: Vec<Fila>,
+    total: i64,
+    conciliados: i64,
 }
 
 pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
@@ -436,7 +495,13 @@ pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
     .bind(id)
     .fetch_all(&st.db)
     .await?;
-    Ok(Pagina { filas })
+    let (total, conciliados): (i64, i64) = sqlx::query_as(
+        "SELECT count(*), count(cfdi_uuid) FROM movimientos WHERE usuario_id = $1",
+    )
+    .bind(id)
+    .fetch_one(&st.db)
+    .await?;
+    Ok(Pagina { filas, total, conciliados })
 }
 
 #[cfg(test)]

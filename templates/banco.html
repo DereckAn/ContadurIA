@@ -11,8 +11,18 @@
     </label>
     <button type="submit">Subir y leer</button>
   </form>
-  <small>La lectura puede tardar uno o dos minutos mientras el modelo procesa el PDF.</small>
+  <small>Tus estados de cuenta de BBVA se leen al instante. Otros bancos usan un modelo local y tardan un poco.</small>
 </article>
+
+{% if total > 0 %}
+<p>
+  <strong>{{ conciliados }} de {{ total }}</strong> movimientos tienen factura (CFDI).
+  <form method="post" action="/banco/conciliar" style="display:inline; margin-left:1rem">
+    <button type="submit" class="outline">Conciliar con CFDI</button>
+  </form>
+</p>
+<small>La conciliación casa cada movimiento con un CFDI del mismo RFC, monto y fecha. Vuelve a correrla después de sincronizar con el SAT.</small>
+{% endif %}
 
 <div class="overflow-auto">
   <table>

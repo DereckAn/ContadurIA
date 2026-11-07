@@ -92,6 +92,7 @@ async fn main() {
         .route("/resumen", get(resumen::pagina))
         .route("/banco", get(banco::pagina))
         .route("/banco/subir", post(banco::subir))
+        .route("/banco/conciliar", post(banco::conciliar_handler))
         .route("/cfdi", get(cfdi::pagina))
         .route("/sat", get(sat::pagina))
         .route("/sat/pendientes", get(sat::pendientes))
