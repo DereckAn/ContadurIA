@@ -2,9 +2,12 @@ mod auth;
 mod banco;
 mod calendario;
 mod cfdi;
+mod informe;
 mod perfil;
 mod resumen;
 mod sat;
+mod tareas;
+mod telegram;
 
 use std::sync::Arc;
 
@@ -64,6 +67,7 @@ pub fn var(nombre: &str, defecto: &str) -> String {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok(); // carga variables de .env si existe
     let app_url = var("APP_URL", "http://localhost:3000");
     let origen = Url::parse(&app_url).expect("APP_URL no es una URL válida");
     let rp_id = origen.domain().expect("APP_URL necesita un dominio").to_owned();
@@ -80,6 +84,16 @@ async fn main() {
     sesiones.migrate().await.expect("no se pudo crear la tabla de sesiones");
     tokio::spawn(sesiones.clone().continuously_delete_expired(tokio::time::Duration::from_secs(3600)));
 
+    let estado = AppState {
+        db,
+        webauthn: Arc::new(webauthn),
+        http: reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .build()
+            .expect("cliente HTTP"),
+    };
+    tokio::spawn(tareas::programador(estado.clone()));
+
     let app = Router::new()
         .route("/", get(perfil::inicio))
         .route("/perfil", get(perfil::ver).post(perfil::guardar))
@@ -90,6 +104,11 @@ async fn main() {
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
         .route("/resumen", get(resumen::pagina))
+        .route("/informe", get(informe::pagina))
+        .route("/informe/enviar", post(informe::enviar_handler))
+        .route("/telegram", get(telegram::pagina))
+        .route("/telegram/vincular", post(telegram::vincular_handler))
+        .route("/telegram/probar", post(telegram::probar_handler))
         .route("/banco", get(banco::pagina))
         .route("/banco/subir", post(banco::subir))
         .route("/banco/conciliar", post(banco::conciliar_handler))
@@ -103,14 +122,7 @@ async fn main() {
                 .with_secure(origen.scheme() == "https")
                 .with_expiry(Expiry::OnInactivity(Duration::days(7))),
         )
-        .with_state(AppState {
-            db,
-            webauthn: Arc::new(webauthn),
-            http: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .build()
-                .expect("cliente HTTP"),
-        });
+        .with_state(estado);
 
     let direccion = var("BIND", "127.0.0.1:3000");
     let listener = tokio::net::TcpListener::bind(&direccion).await.expect("no se pudo abrir el puerto");

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Alertas por Telegram</h1>
+
+{% if conectado %}
+<p><mark>Telegram conectado.</mark> Te avisaré por aquí de tus obligaciones y del informe mensual.</p>
+<form method="post" action="/telegram/probar">
+  <button type="submit" class="outline">Enviar mensaje de prueba</button>
+</form>
+{% else %}
+<p>Recibe recordatorios de tus obligaciones fiscales en Telegram.</p>
+<ol>
+  <li>Abre Telegram y busca <strong>@{{ usuario_bot }}</strong>.</li>
+  <li>Mándale el mensaje <code>/start</code>.</li>
+  <li>Regresa aquí y pulsa el botón.</li>
+</ol>
+<form method="post" action="/telegram/vincular">
+  <button type="submit">Vincular mi Telegram</button>
+</form>
+{% endif %}
+{% endblock %}

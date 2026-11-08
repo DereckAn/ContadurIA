@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Informe de {{ d.mes_texto }}</h1>
+{% if enviado %}<p><mark>Informe enviado a {{ d.correo }}.</mark></p>{% endif %}
+<p>Hola, {{ d.nombre }}. Este es tu resumen del mes.</p>
+<form method="post" action="/informe/enviar" style="margin-bottom:1rem">
+  <button type="submit" class="outline">Enviarme este informe por correo</button>
+</form>
+
+<div class="grid">
+  <article><hgroup><h3>{{ d.ingresos }}</h3><p>Ingresos</p></hgroup></article>
+  <article><hgroup><h3>{{ d.gastos }}</h3><p>Gastos</p></hgroup></article>
+  <article><hgroup><h3>{{ d.balance }}</h3><p>Balance</p></hgroup></article>
+</div>
+
+<h2>Deducibles</h2>
+<p>De tus gastos, <strong>{{ d.n_gastos_fact }} de {{ d.n_gastos }}</strong> tienen factura (CFDI).</p>
+<div class="grid">
+  <article><hgroup><h3>{{ d.gastos_facturados }}</h3><p>Con factura (deducible)</p></hgroup></article>
+  <article><hgroup><h3>{{ d.gastos_sin_factura }}</h3><p>Sin factura</p></hgroup></article>
+  <article><hgroup><h3>{{ d.iva_acreditable }}</h3><p>IVA acreditable</p></hgroup></article>
+</div>
+
+<h2>Próximas obligaciones</h2>
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Fecha</th><th>Obligación</th><th>Detalle</th></tr></thead>
+    <tbody>
+      {% for o in d.obligaciones %}
+      <tr><td>{{ o.fecha_texto() }}<br><small>{{ o.faltan_texto() }}</small></td><td>{{ o.titulo }}</td><td>{{ o.detalle }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">Sin obligaciones en los próximos 45 días.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p><small>Montos tomados de tus movimientos del banco y tus CFDI. No es un cálculo oficial de impuestos.</small></p>
+{% endblock %}
