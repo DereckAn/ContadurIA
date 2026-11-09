@@ -1,53 +1,99 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Declaración anual {{ anio }}</h1>
-<p>Estimación de tu ISR del ejercicio a partir de tu nómina. <strong>No es un cálculo oficial;</strong> verifica en el SAT antes de presentar.</p>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Declaración anual {{ anio }}</h1>
+  <p class="text-muted mt-1">Estimación de tu ISR del ejercicio a partir de tu nómina. <strong class="text-ink">No es un cálculo oficial;</strong> verifica en el SAT antes de presentar.</p>
+</div>
 
 {% if sin_tabla %}
-<p><mark>Aún no tengo la tarifa oficial de {{ anio }}. Esta estimación aplica solo al ejercicio 2026.</mark></p>
+<p class="mb-4"><span class="inline-block bg-warn-soft text-ink px-2 py-1 rounded text-sm">Aún no tengo la tarifa oficial de {{ anio }}. Esta estimación aplica solo al ejercicio 2026.</span></p>
 {% endif %}
 
-<div class="overflow-auto">
-  <table>
+<div class="rounded-xl bg-card border border-line shadow-sm overflow-hidden mb-6">
+  <table class="w-full text-sm">
     <tbody>
-      <tr><td>Ingresos por sueldos (gravado)</td><td style="text-align:right">{{ ingreso }}</td></tr>
-      <tr><td>− Deducciones personales <small>(tope {{ tope }})</small></td><td style="text-align:right">{{ deducciones }}</td></tr>
-      <tr><td><strong>Base gravable</strong></td><td style="text-align:right"><strong>{{ base }}</strong></td></tr>
-      <tr><td>ISR causado (tarifa anual)</td><td style="text-align:right">{{ isr_causado }}</td></tr>
-      <tr><td>− Subsidio al empleo</td><td style="text-align:right">{{ subsidio }}</td></tr>
-      <tr><td>− ISR retenido por tu patrón</td><td style="text-align:right">{{ retenido }}</td></tr>
+      <tr class="border-b border-line"><td class="px-4 py-3">Ingresos por sueldos (gravado)</td><td class="px-4 py-3 text-right tnum">{{ ingreso }}</td></tr>
+      <tr class="border-b border-line"><td class="px-4 py-3">− Deducciones personales <span class="text-muted text-xs">(tope {{ tope }})</span></td><td class="px-4 py-3 text-right tnum">{{ deducciones }}</td></tr>
+      <tr class="border-b border-line bg-surface"><td class="px-4 py-3 font-semibold">Base gravable</td><td class="px-4 py-3 text-right tnum font-semibold">{{ base }}</td></tr>
+      <tr class="border-b border-line"><td class="px-4 py-3">ISR causado (tarifa anual)</td><td class="px-4 py-3 text-right tnum">{{ isr_causado }}</td></tr>
+      <tr class="border-b border-line"><td class="px-4 py-3">− Subsidio al empleo</td><td class="px-4 py-3 text-right tnum">{{ subsidio }}</td></tr>
+      <tr><td class="px-4 py-3">− ISR retenido por tu patrón</td><td class="px-4 py-3 text-right tnum">{{ retenido }}</td></tr>
     </tbody>
   </table>
 </div>
 
 {% if a_favor != "" %}
-<article style="border-left:4px solid green"><strong>Saldo a favor: {{ a_favor }}</strong><br><small>El SAT podría devolverte este monto.</small></article>
+<div class="rounded-xl bg-ok-soft border border-line border-l-4 border-l-ok p-5 mb-4"><strong class="text-ink text-lg">Saldo a favor: {{ a_favor }}</strong><p class="text-sm text-muted mt-1">El SAT podría devolverte este monto.</p></div>
 {% else %}
-<article style="border-left:4px solid #b00"><strong>ISR a cargo: {{ a_cargo }}</strong><br><small>Esto es lo que tendrías que pagar al presentar.</small></article>
+<div class="rounded-xl bg-danger-soft border border-line border-l-4 border-l-danger p-5 mb-4"><strong class="text-ink text-lg">ISR a cargo: {{ a_cargo }}</strong><p class="text-sm text-muted mt-1">Esto es lo que tendrías que pagar al presentar.</p></div>
 {% endif %}
 
-<p><a href="/anual/expediente?anio={{ anio }}" role="button" class="outline">Descargar expediente (ZIP)</a></p>
-<small>El ZIP incluye el resumen del cálculo, un CSV de todos tus CFDI del año y los XML originales.</small>
+<details class="rounded-xl bg-card border border-line p-4 mb-6">
+  <summary class="cursor-pointer font-semibold text-ink">¿Qué significa esto?</summary>
+  <p class="text-sm text-muted mt-2">Tu <strong>ISR causado</strong> es el impuesto que te toca por tus ingresos del año, según la tarifa oficial. Durante el año tu patrón ya te fue reteniendo ISR. Si te retuvieron más de lo que te tocaba, la diferencia es tu <strong>saldo a favor</strong>; si retuvieron de menos, queda <strong>a cargo</strong>. Las <strong>deducciones personales</strong> (médicos, colegiaturas, PPR…) bajan la base del impuesto, hasta un tope de ley.</p>
+</details>
 
-<h2>Deducciones personales detectadas</h2>
+{% if proy_mostrar %}
+<div class="rounded-xl bg-primary-soft border border-line border-l-4 border-l-primary p-5 mb-6">
+  <strong class="text-ink">Proyección de cierre de {{ anio }}</strong>
+  <p class="text-sm text-ink mt-1">Con {{ proy_meses }} meses de datos, si sigues así cerrarás el año con ingresos de ~{{ proy_ingreso }} y
+    {% if proy_a_favor != "" %}un saldo a favor de ~<strong>{{ proy_a_favor }}</strong>.{% else %}un ISR a cargo de ~<strong>{{ proy_a_cargo }}</strong>.{% endif %}</p>
+  <p class="text-xs text-muted mt-1">Aún estás a tiempo de bajarlo: aporta a un PPR o junta facturas deducibles antes del 31 de diciembre.</p>
+</div>
+{% endif %}
+
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm mb-6">
+  <h2 class="text-lg font-semibold text-ink">Simulador: ¿y si deduzco más?</h2>
+  <p class="text-sm text-muted mt-1 mb-4">Te queda <strong class="text-ink">{{ tope_restante }}</strong> de tope de deducciones este año. Prueba cuánto cambia tu resultado si facturas gastos médicos, colegiaturas o aportas a un PPR.</p>
+  <form method="get" action="/anual" class="flex flex-col sm:flex-row sm:items-end gap-3">
+    <input type="hidden" name="anio" value="{{ anio }}">
+    <label class="flex-1">
+      <span class="text-sm font-medium text-ink">Monto deducible a simular</span>
+      <input type="number" name="simular" min="0" step="100" placeholder="Ej. 20000" value="{{ sim_input }}"
+             class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink tnum focus:outline-none focus:border-primary">
+    </label>
+    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded border border-sand text-primary font-semibold bg-transparent hover:bg-sand-soft transition">
+      <span class="material-symbols-outlined text-[18px]">calculate</span>Simular
+    </button>
+  </form>
+  {% if sim_mostrar %}
+  <div class="rounded-lg bg-ok-soft border-l-4 border-l-ok p-4 mt-4 text-sm text-ink">
+    Si deduces <strong>{{ sim_monto }}</strong> más, tu resultado sería
+    {% if sim_a_favor != "" %}un saldo a favor de <strong>{{ sim_a_favor }}</strong>{% else %}un ISR a cargo de <strong>{{ sim_a_cargo }}</strong>{% endif %}
+    — ahorras <strong>{{ sim_ahorro }}</strong> de ISR.
+    <div class="text-xs text-muted mt-1">Limitado por tu tope de deducciones. Guarda los CFDI que respalden estos gastos.</div>
+  </div>
+  {% endif %}
+</div>
+
+<a href="/anual/expediente?anio={{ anio }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
+  <span class="material-symbols-outlined text-[18px]">download</span>Descargar expediente (ZIP)
+</a>
+<p class="text-xs text-muted mt-2 mb-6">El ZIP incluye el resumen del cálculo, un CSV de todos tus CFDI del año y los XML originales.</p>
+
+<h2 class="text-lg font-semibold text-ink mb-2">Deducciones personales detectadas</h2>
 {% if deducibles.is_empty() %}
-<p>No encontré CFDI deducibles este año. Para bajar tu impuesto (o aumentar tu saldo a favor), pide factura de: gastos médicos y dentales, lentes, primas de seguro de gastos médicos, colegiaturas, intereses de tu crédito hipotecario, o haz aportaciones a un PPR.</p>
+<p class="text-muted mb-6">No encontré CFDI deducibles este año. Para bajar tu impuesto (o aumentar tu saldo a favor), pide factura de: gastos médicos y dentales, lentes, primas de seguro de gastos médicos, colegiaturas, intereses de tu crédito hipotecario, o haz aportaciones a un PPR.</p>
 {% else %}
-<div class="overflow-auto">
-  <table>
-    <thead><tr><th>Concepto</th><th>CFDI</th><th style="text-align:right">Monto</th></tr></thead>
+<div class="overflow-x-auto rounded-xl border border-line bg-card mb-6">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Concepto</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">CFDI</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Monto</th>
+    </tr></thead>
     <tbody>
       {% for d in deducibles %}
-      <tr><td>{{ d.concepto }}</td><td>{{ d.cuenta }}</td><td style="text-align:right">{{ d.monto }}</td></tr>
+      <tr class="border-t border-line"><td class="px-4 py-3">{{ d.concepto }}</td><td class="px-4 py-3 text-right tnum">{{ d.cuenta }}</td><td class="px-4 py-3 text-right tnum">{{ d.monto }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% endif %}
 
-<h2>Facturas que te faltan</h2>
-<p>Tienes <strong>{{ n_sin_factura }}</strong> gastos en el banco sin CFDI, por <strong>{{ gastos_sin_factura }}</strong>. Si alguno es deducible (médico, colegiatura, etc.), pide la factura con tu RFC. <a href="/banco">Ver movimientos</a></p>
+<h2 class="text-lg font-semibold text-ink mb-2">Facturas que te faltan</h2>
+<p class="text-muted">Tienes <strong class="text-ink">{{ n_sin_factura }}</strong> gastos en el banco sin CFDI, por <strong class="text-ink">{{ gastos_sin_factura }}</strong>. Si alguno es deducible (médico, colegiatura, etc.), pide la factura con tu RFC. <a href="/banco" class="text-primary underline">Ver movimientos</a></p>
 
-<p><small>La tarifa anual 2026 es del Anexo 8 de la RMF 2026 (DOF 28-dic-2025). UMA 2026 del INEGI.</small></p>
+<p class="text-xs text-muted mt-4">La tarifa anual 2026 es del Anexo 8 de la RMF 2026 (DOF 28-dic-2025). UMA 2026 del INEGI.</p>
 {% endblock %}

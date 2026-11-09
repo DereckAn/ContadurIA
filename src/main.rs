@@ -8,6 +8,7 @@ mod fiscal;
 mod informe;
 mod iva;
 mod pagos;
+mod panel;
 mod perfil;
 mod resumen;
 mod sat;
@@ -108,6 +109,7 @@ async fn main() {
         .route("/auth/registro/fin", post(auth::registro_fin))
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
+        .route("/panel", get(panel::pagina))
         .route("/resumen", get(resumen::pagina))
         .route("/anual", get(anual::pagina))
         .route("/anual/expediente", get(anual::expediente))

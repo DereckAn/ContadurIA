@@ -1,32 +1,55 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Sincronizar con el SAT</h1>
-<p>Descarga tus CFDI emitidos y recibidos con tu e.firma. <strong>Tu e.firma se abre sólo en este navegador; nunca se envía al servidor.</strong></p>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Sincronizar con el SAT</h1>
+  <p class="text-muted mt-1">Descarga tus CFDI emitidos y recibidos con tu e.firma.</p>
+</div>
 
-<article>
-  <form id="efirma" data-rfc="{{ rfc }}">
-    <div class="grid">
-      <label>Certificado (.cer) <input type="file" name="cer" accept=".cer" required></label>
-      <label>Llave privada (.key) <input type="file" name="key" accept=".key" required></label>
+<div class="rounded-xl bg-primary-soft border border-line border-l-4 border-l-primary p-4 mb-6 flex items-start gap-2">
+  <span class="material-symbols-outlined text-primary">lock</span>
+  <p class="text-sm text-ink"><strong>Tu e.firma se abre sólo en este navegador; nunca se envía al servidor.</strong></p>
+</div>
+
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm mb-6 max-w-2xl">
+  <form id="efirma" data-rfc="{{ rfc }}" class="space-y-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="text-sm font-medium text-ink">Certificado (.cer)</span>
+        <input type="file" name="cer" accept=".cer" required class="mt-1 block w-full text-sm text-muted file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:bg-primary file:text-on-primary file:text-sm">
+      </label>
+      <label class="block">
+        <span class="text-sm font-medium text-ink">Llave privada (.key)</span>
+        <input type="file" name="key" accept=".key" required class="mt-1 block w-full text-sm text-muted file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:bg-primary file:text-on-primary file:text-sm">
+      </label>
     </div>
-    <label>Contraseña de la e.firma <input type="password" name="contrasena" required autocomplete="off"></label>
-    <button type="submit">Abrir e.firma y sincronizar</button>
+    <label class="block">
+      <span class="text-sm font-medium text-ink">Contraseña de la e.firma</span>
+      <input type="password" name="contrasena" required autocomplete="off" class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink focus:outline-none focus:border-primary">
+    </label>
+    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
+      <span class="material-symbols-outlined text-[18px]">sync</span>Abrir e.firma y sincronizar
+    </button>
   </form>
-  <ul id="bitacora" aria-live="polite"></ul>
-  <small>El SAT tarda de minutos a horas en preparar los paquetes. Deja esta página abierta y revisará cada 2 minutos, o vuelve más tarde.</small>
-</article>
+  <ul id="bitacora" aria-live="polite" class="mt-4 font-mono text-xs text-muted space-y-1"></ul>
+  <p class="text-xs text-muted mt-3">El SAT tarda de minutos a horas en preparar los paquetes. Deja esta página abierta (revisa cada 2 minutos) o vuelve más tarde.</p>
+</div>
 
-<h2>Solicitudes</h2>
-<p>{{ total_cfdi }} CFDI guardados. <a href="/cfdi">Ver CFDI</a></p>
-<div class="overflow-auto">
-  <table>
-    <thead><tr><th>Tipo</th><th>Periodo</th><th>Estado</th><th>Mensaje</th></tr></thead>
+<h2 class="text-lg font-semibold text-ink mb-2">Solicitudes</h2>
+<p class="text-muted mb-3">{{ total_cfdi }} CFDI guardados. <a href="/cfdi" class="text-primary underline">Ver CFDI</a></p>
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Tipo</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Periodo</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Estado</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Mensaje</th>
+    </tr></thead>
     <tbody>
       {% for s in solicitudes %}
-      <tr><td>{{ s.tipo }}</td><td>{{ s.periodo() }}</td><td>{{ s.estado }}</td><td>{{ s.mensaje }}</td></tr>
+      <tr class="border-t border-line"><td class="px-4 py-3">{{ s.tipo }}</td><td class="px-4 py-3">{{ s.periodo() }}</td><td class="px-4 py-3">{{ s.estado }}</td><td class="px-4 py-3 text-muted">{{ s.mensaje }}</td></tr>
       {% else %}
-      <tr><td colspan="4">Aún no hay solicitudes.</td></tr>
+      <tr class="border-t border-line"><td colspan="4" class="px-4 py-6 text-center text-muted">Aún no hay solicitudes.</td></tr>
       {% endfor %}
     </tbody>
   </table>

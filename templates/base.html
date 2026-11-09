@@ -1,20 +1,165 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ContadurIA</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css">
+  <script>
+    // Modo oscuro antes de pintar (evita parpadeo).
+    try {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && matchMedia('(prefers-color-scheme: dark)').matches))
+        document.documentElement.classList.add('dark');
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        colors: {
+          bg: 'var(--bg)', surface: 'var(--surface)', card: 'var(--card)',
+          ink: 'var(--ink)', muted: 'var(--muted)', line: 'var(--line)',
+          primary: 'var(--primary)', 'on-primary': 'var(--on-primary)', 'primary-soft': 'var(--primary-soft)',
+          sand: 'var(--sand)', 'sand-soft': 'var(--sand-soft)',
+          ok: 'var(--ok)', 'ok-soft': 'var(--ok-soft)',
+          warn: 'var(--warn)', 'warn-soft': 'var(--warn-soft)',
+          danger: 'var(--danger)', 'danger-soft': 'var(--danger-soft)',
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+        borderRadius: { DEFAULT: '0.25rem', lg: '0.5rem', xl: '0.75rem' },
+        maxWidth: { content: '1280px' },
+      } }
+    };
+  </script>
+  <style>
+    :root {
+      --bg:#eef4ed; --surface:#f4fbf3; --card:#ffffff; --ink:#161d19; --muted:#5c665e; --line:#dde4dd;
+      --primary:#1e3b2f; --on-primary:#ffffff; --primary-soft:#dae8c0;
+      --sand:#c8b48a; --sand-soft:#f1ead9;
+      --ok:#1b6b44; --ok-soft:#e8f3ec; --warn:#b8860b; --warn-soft:#fef6e7; --danger:#c53030; --danger-soft:#fde8e8;
+    }
+    .dark {
+      --bg:#121a15; --surface:#161d19; --card:#1b241e; --ink:#e8ebe4; --muted:#9da99f; --line:#2d3930;
+      --primary:#7ca38c; --on-primary:#07251a; --primary-soft:#24352b;
+      --sand:#d9c499; --sand-soft:#2a2512;
+      --ok:#4ea87b; --ok-soft:#14301f; --warn:#d9a441; --warn-soft:#2e2510; --danger:#e06a6a; --danger-soft:#2e1414;
+    }
+    body { font-family: Inter, system-ui, sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-size: 20px; line-height: 1; }
+    .tnum { font-variant-numeric: tabular-nums lining-nums; }
+    .nav-link { color: var(--muted); }
+    .nav-link:hover { background: var(--primary-soft); color: var(--ink); }
+    .nav-link.active { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+
+    /* --- Estilos base para páginas aún no migradas a Tailwind (legibles y on-brand) --- */
+    main.legacy h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 .75rem; }
+    main.legacy h2 { font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 .5rem; }
+    main.legacy h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+    main.legacy p { margin: .5rem 0; color: var(--ink); }
+    main.legacy a { color: var(--primary); text-decoration: underline; }
+    main.legacy small { color: var(--muted); }
+    main.legacy article { background: var(--card); border: 1px solid var(--line); border-radius: .5rem; padding: 1rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(30,59,47,.04); }
+    main.legacy .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    main.legacy table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; }
+    main.legacy th, main.legacy td { padding: .6rem .75rem; border-bottom: 1px solid var(--line); text-align: left; }
+    main.legacy th { background: var(--surface); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    main.legacy .overflow-auto { overflow-x: auto; }
+    main.legacy label { display: block; margin: .5rem 0 .25rem; font-weight: 500; }
+    main.legacy input, main.legacy select, main.legacy textarea { font: inherit; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: .25rem; background: var(--card); color: var(--ink); max-width: 28rem; width: 100%; }
+    main.legacy input[type=checkbox] { width: auto; }
+    main.legacy button, main.legacy [role=button] { font: inherit; display: inline-block; padding: .55rem .9rem; border-radius: .25rem; border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); cursor: pointer; text-decoration: none; }
+    main.legacy button.outline, main.legacy .outline { background: transparent; color: var(--primary); border-color: var(--sand); }
+    main.legacy .secondary { background: var(--muted); border-color: var(--muted); color: #fff; }
+    main.legacy progress { width: 100%; height: .6rem; }
+    main.legacy details { background: var(--card); border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; margin: 1rem 0; }
+    main.legacy summary { cursor: pointer; font-weight: 600; }
+    main.legacy mark { background: var(--warn-soft); color: var(--ink); padding: .1rem .3rem; border-radius: .25rem; }
+    main.legacy ul#bitacora { list-style: none; padding: 0; font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+  </style>
 </head>
-<body>
-  <header class="container">
-    <nav>
-      <ul><li><strong>ContadurIA</strong></li></ul>
-      {% block menu %}{% endblock %}
+<body class="bg-bg text-ink antialiased">
+  {% block chrome %}
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-surface border-r border-line z-50 flex flex-col -translate-x-full md:translate-x-0 transition-transform">
+    <div class="h-16 px-4 flex items-center gap-2 border-b border-line">
+      <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+      <span class="text-lg font-bold text-primary tracking-tight">ContadurIA</span>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-2 py-4 space-y-5 text-sm">
+      <div class="space-y-1">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Panel</div>
+        <a href="/panel" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg transition-colors"><span class="material-symbols-outlined text-[18px]">dashboard</span>Panel</a>
+      </div>
+      <div class="space-y-1">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Fiscal</div>
+        <a href="/" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">calendar_month</span>Calendario</a>
+        <a href="/resumen" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">summarize</span>Resumen</a>
+        <a href="/anual" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">fact_check</span>Anual</a>
+        <a href="/iva" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">percent</span>IVA</a>
+        <a href="/pagos" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">payments</span>Pagos</a>
+        <a href="/discrepancias" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">rule</span>Discrepancias</a>
+      </div>
+      <div class="space-y-1">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Documentos</div>
+        <a href="/cfdi" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">receipt_long</span>CFDI</a>
+        <a href="/banco" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">account_balance</span>Banco</a>
+        <a href="/sat" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">assured_workload</span>SAT</a>
+      </div>
+      <div class="space-y-1">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Avisos</div>
+        <a href="/telegram" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">send</span>Telegram</a>
+      </div>
+      <div class="space-y-1">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Cuenta</div>
+        <a href="/perfil" class="nav-link flex items-center gap-2 px-2 py-2 rounded-lg"><span class="material-symbols-outlined text-[18px]">badge</span>Perfil</a>
+        <form method="post" action="/salir" class="m-0">
+          <button type="submit" class="nav-link w-full flex items-center gap-2 px-2 py-2 rounded-lg bg-transparent border-0 cursor-pointer text-left"><span class="material-symbols-outlined text-[18px]">logout</span>Salir</button>
+        </form>
+      </div>
     </nav>
-  </header>
-  <main class="container">
-    {% block contenido %}{% endblock %}
-  </main>
+  </aside>
+  {% endblock %}
+
+  <div class="{% block layout %}md:pl-64{% endblock %} min-h-screen flex flex-col">
+    {% block topbar %}
+    <header class="sticky top-0 h-16 bg-surface/85 backdrop-blur border-b border-line z-40 flex items-center justify-between px-4">
+      <div class="flex items-center gap-3">
+        <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')" class="md:hidden p-2 rounded-lg text-muted hover:bg-primary-soft" aria-label="Menú">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <span class="font-semibold text-primary md:hidden">ContadurIA</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="toggleTheme()" class="p-2 rounded-lg text-muted hover:bg-primary-soft" aria-label="Cambiar tema">
+          <span class="material-symbols-outlined">dark_mode</span>
+        </button>
+        <span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center">
+          <span class="material-symbols-outlined text-[18px]">person</span>
+        </span>
+      </div>
+    </header>
+    {% endblock %}
+
+    <main class="p-4 md:p-8 w-full max-w-content mx-auto flex-1 {% block mainmod %}legacy{% endblock %}">
+      {% block contenido %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    // Resalta el enlace activo del menú.
+    (function () {
+      var p = location.pathname;
+      document.querySelectorAll('#sidebar a[href]').forEach(function (a) {
+        if (a.getAttribute('href') === p) a.classList.add('active');
+      });
+    })();
+    function toggleTheme() {
+      var d = document.documentElement.classList.toggle('dark');
+      try { localStorage.theme = d ? 'dark' : 'light'; } catch (e) {}
+    }
+  </script>
 </body>
 </html>

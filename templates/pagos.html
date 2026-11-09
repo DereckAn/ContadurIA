@@ -1,44 +1,53 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Pagos provisionales {{ anio }}</h1>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Pagos provisionales {{ anio }}</h1>
+</div>
 
 {% match regimen %}
 {% when Some(r) %}
-<p>Régimen: <strong>{{ r }}</strong>. Anticipos mensuales de ISR; vencen el día 17 del mes siguiente.</p>
-{% if sin_tabla %}<p><mark>Solo tengo la tarifa de 2026; cámbialo con ?anio=2026.</mark></p>{% endif %}
+<p class="text-muted mb-2">Régimen: <strong class="text-ink">{{ r }}</strong>. Anticipos mensuales de ISR; vencen el día 17 del mes siguiente.</p>
+{% if sin_tabla %}<p class="mb-3"><span class="inline-block bg-warn-soft text-ink px-2 py-1 rounded text-sm">Solo tengo la tarifa de 2026; cámbialo con ?anio=2026.</span></p>{% endif %}
 
-<div class="overflow-auto">
-  <table>
-    <thead><tr>
-      <th>Mes</th>
-      <th style="text-align:right">{% if es_resico %}Ingresos del mes{% else %}Ingresos acum.{% endif %}</th>
-      <th style="text-align:right">Deducciones</th>
-      <th style="text-align:right">Base</th>
-      <th style="text-align:right">Pago del mes</th>
-      <th>Fecha límite</th>
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Mes</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">{% if es_resico %}Ingresos del mes{% else %}Ingresos acum.{% endif %}</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Deducciones</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Base</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Pago del mes</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Fecha límite</th>
     </tr></thead>
     <tbody>
       {% for f in filas %}
-      <tr>
-        <td>{{ f.mes }}</td>
-        <td style="text-align:right">{{ f.ingresos }}</td>
-        <td style="text-align:right">{{ f.deducciones }}</td>
-        <td style="text-align:right">{{ f.base }}</td>
-        <td style="text-align:right"><strong>{{ f.pago }}</strong></td>
-        <td>{{ f.limite }}</td>
+      <tr class="border-t border-line">
+        <td class="px-4 py-3">{{ f.mes }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.ingresos }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.deducciones }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.base }}</td>
+        <td class="px-4 py-3 text-right tnum font-semibold">{{ f.pago }}</td>
+        <td class="px-4 py-3">{{ f.limite }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="6">No hay ingresos facturados en {{ anio }}. Cuando emitas CFDI, aquí verás tu pago mensual.</td></tr>
+      <tr class="border-t border-line"><td colspan="6" class="px-4 py-6 text-center text-muted">No hay ingresos facturados en {{ anio }}. Cuando emitas CFDI, aquí verás tu pago mensual.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-<p>Total de ISR provisional del año: <strong>{{ total }}</strong></p>
-<p><small>Estimación con la tarifa 2026. No incluye retenciones ni PTU; no es un cálculo oficial. Para arrendamiento (606) no considera aún la deducción ciega del 35%.</small></p>
+<p class="mt-3 text-ink">Total de ISR provisional del año: <strong class="tnum">{{ total }}</strong></p>
+
+<details class="mt-4 rounded-xl bg-card border border-line p-4">
+  <summary class="cursor-pointer font-semibold text-ink">¿Qué son los pagos provisionales?</summary>
+  <p class="text-sm text-muted mt-2">Son anticipos mensuales del ISR anual: pagas poco a poco conforme ganas, en vez de todo junto en abril. Cada mes calculas el impuesto sobre lo acumulado y le restas lo ya pagado. Vencen el día 17 del mes siguiente.</p>
+</details>
+<p class="text-xs text-muted mt-3">Estimación con la tarifa 2026. No incluye retenciones ni PTU; no es un cálculo oficial. Arrendamiento (606) aún sin la deducción ciega del 35%.</p>
 
 {% when None %}
-<p>Tu régimen fiscal no hace pagos provisionales mensuales de ISR. Si eres sueldos y salarios (605), tu patrón ya retiene el ISR cada periodo.</p>
-<p>Si te das de alta en RESICO (626), actividad empresarial (612), arrendamiento (606) o plataformas (625), agrega el régimen en tu <a href="/perfil">perfil</a> y aquí aparecerá el cálculo.</p>
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm">
+  <p class="text-ink">Tu régimen fiscal no hace pagos provisionales mensuales de ISR. Si eres sueldos y salarios (605), tu patrón ya retiene el ISR cada periodo.</p>
+  <p class="text-muted mt-2">Si te das de alta en RESICO (626), actividad empresarial (612), arrendamiento (606) o plataformas (625), agrégalo en tu <a href="/perfil" class="text-primary underline">perfil</a> y aquí aparecerá el cálculo.</p>
+</div>
 {% endmatch %}
 {% endblock %}

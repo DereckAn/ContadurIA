@@ -1,38 +1,46 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Resumen {{ anio }}</h1>
-
-<div class="grid">
-  <article><hgroup><h3>{{ ingresos }}</h3><p>Ingresos facturados</p></hgroup></article>
-  <article><hgroup><h3>{{ gastos }}</h3><p>Gastos facturados</p></hgroup></article>
-  <article><hgroup><h3>{{ balance }}</h3><p>Balance</p></hgroup></article>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Resumen {{ anio }}</h1>
+  <p class="text-muted mt-1">Tus ingresos, gastos e IVA del año.</p>
 </div>
 
-<h2>IVA</h2>
-<div class="grid">
-  <article><hgroup><h3>{{ iva_trasladado }}</h3><p>IVA cobrado (trasladado)</p></hgroup></article>
-  <article><hgroup><h3>{{ iva_acreditable }}</h3><p>IVA pagado (acreditable)</p></hgroup></article>
-  <article><hgroup><h3>{{ iva_por_pagar }}</h3><p>Diferencia</p></hgroup></article>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">Ingresos facturados</div><div class="text-2xl font-bold tnum mt-2">{{ ingresos }}</div></div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">Gastos facturados</div><div class="text-2xl font-bold tnum mt-2">{{ gastos }}</div></div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm border-t-2 border-t-primary"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">Balance</div><div class="text-2xl font-bold tnum mt-2">{{ balance }}</div></div>
 </div>
 
-<h2>Por mes</h2>
-<div class="overflow-auto">
-  <table>
-    <thead><tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Gastos</th><th style="text-align:right">Balance</th></tr></thead>
+<h2 class="text-lg font-semibold text-ink mb-3">IVA</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">IVA cobrado</div><div class="text-xl font-bold tnum mt-2">{{ iva_trasladado }}</div></div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">IVA pagado</div><div class="text-xl font-bold tnum mt-2">{{ iva_acreditable }}</div></div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm"><div class="text-[11px] font-semibold uppercase tracking-wider text-muted">Diferencia</div><div class="text-xl font-bold tnum mt-2">{{ iva_por_pagar }}</div></div>
+</div>
+
+<h2 class="text-lg font-semibold text-ink mb-3">Por mes</h2>
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Mes</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Ingresos</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Gastos</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Balance</th>
+    </tr></thead>
     <tbody>
       {% for m in meses %}
-      <tr>
-        <td>{{ m.nombre() }}</td>
-        <td style="text-align:right">{{ m.ingresos_texto() }}</td>
-        <td style="text-align:right">{{ m.gastos_texto() }}</td>
-        <td style="text-align:right">{{ m.balance_texto() }}</td>
+      <tr class="border-t border-line">
+        <td class="px-4 py-3">{{ m.nombre() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ m.ingresos_texto() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ m.gastos_texto() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ m.balance_texto() }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="4">Aún no hay CFDI de {{ anio }}. <a href="/sat">Sincroniza con el SAT</a>.</td></tr>
+      <tr class="border-t border-line"><td colspan="4" class="px-4 py-6 text-center text-muted">Aún no hay CFDI de {{ anio }}. <a href="/sat" class="text-primary underline">Sincroniza con el SAT</a>.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-<p><small>Calculado desde tus CFDI de ingreso. No incluye notas de crédito, nómina ni complementos de pago, ni es un cálculo oficial de impuestos.</small></p>
+<p class="text-xs text-muted mt-3">Calculado desde tus CFDI de ingreso. No incluye notas de crédito, nómina ni complementos de pago, ni es un cálculo oficial.</p>
 {% endblock %}

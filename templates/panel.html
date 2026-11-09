@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<!-- Saludo + semáforo -->
+<section class="relative overflow-hidden rounded-xl bg-surface border border-line p-6 mb-6">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1">Tu salud fiscal {{ anio }}</div>
+      <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Hola, {{ nombre }}.</h1>
+    </div>
+  </div>
+  <div class="mt-4 grid gap-2 sm:grid-cols-2">
+    {% for ch in chips %}
+    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border-l-4 {% if ch.nivel == "peligro" %}border-danger bg-danger-soft{% else if ch.nivel == "alerta" %}border-warn bg-warn-soft{% else if ch.nivel == "ok" %}border-ok bg-ok-soft{% else %}border-primary bg-primary-soft{% endif %}">
+      <span class="text-base">{{ ch.icono() }}</span>
+      <span class="text-sm text-ink">{{ ch.texto }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- KPIs -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Ingresos {{ anio }}</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ ingreso }}</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm border-t-2 border-t-primary">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">{{ resultado_label }}</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">savings</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ resultado_monto }}</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">CFDI del año</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">receipt_long</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ cfdi_count }}</div>
+  </div>
+</section>
+
+<!-- Próxima obligación -->
+<section class="rounded-xl bg-card border border-line p-5 shadow-sm mb-6 border-l-4 border-l-sand">
+  <div class="text-[11px] font-semibold uppercase tracking-wider text-muted">Próxima obligación fiscal</div>
+  <div class="text-lg font-semibold text-ink mt-1">{{ proxima }}</div>
+</section>
+
+{% if mostrar_devolucion %}
+<section class="rounded-xl bg-ok-soft border border-line p-5 mb-6 border-l-4 border-l-ok">
+  <div class="flex items-center gap-2">
+    <span class="material-symbols-outlined text-ok">paid</span>
+    <strong class="text-ink">Tienes {{ devolucion }} a favor.</strong>
+  </div>
+  <p class="text-sm text-muted mt-1">Al presentar tu declaración anual puedes solicitar la devolución al SAT. <a href="/anual" class="text-primary font-medium underline">Ver declaración</a></p>
+</section>
+{% endif %}
+
+<!-- Tope de deducciones -->
+<section class="rounded-xl bg-card border border-line p-5 shadow-sm mb-6">
+  <div class="flex items-center justify-between mb-2">
+    <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Tope de deducciones personales</span>
+    <span class="text-sm tnum text-muted">{{ tope_usado }} / {{ tope }}</span>
+  </div>
+  <div class="w-full h-2.5 rounded-full bg-line overflow-hidden">
+    <div class="h-full bg-primary rounded-full" style="width: {{ tope_pct }}%"></div>
+  </div>
+  <p class="text-sm text-muted mt-2">Mientras más deducibles juntes (hasta el tope), menos ISR pagas. <a href="/anual" class="text-primary font-medium underline">Simula cuánto ahorras</a>.</p>
+</section>
+
+<!-- Accesos rápidos -->
+<section>
+  <div class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-3">Acciones frecuentes</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <a href="/cfdi" class="rounded-xl bg-card border border-line p-4 shadow-sm hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-primary">fact_check</span>
+      <div class="font-semibold text-ink mt-2">Validar facturas</div>
+      <div class="text-xs text-muted">CFDI vs SAT</div>
+    </a>
+    <a href="/banco" class="rounded-xl bg-card border border-line p-4 shadow-sm hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-primary">upload_file</span>
+      <div class="font-semibold text-ink mt-2">Subir estado</div>
+      <div class="text-xs text-muted">Importar PDF</div>
+    </a>
+    <a href="/anual" class="rounded-xl bg-card border border-line p-4 shadow-sm hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-primary">calculate</span>
+      <div class="font-semibold text-ink mt-2">Declaración anual</div>
+      <div class="text-xs text-muted">ISR y expediente</div>
+    </a>
+    <a href="/discrepancias" class="rounded-xl bg-card border border-line p-4 shadow-sm hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-primary">rule</span>
+      <div class="font-semibold text-ink mt-2">Discrepancias</div>
+      <div class="text-xs text-muted">Riesgos SAT</div>
+    </a>
+  </div>
+</section>
+{% endblock %}

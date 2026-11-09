@@ -1,17 +1,32 @@
 {% extends "base.html" %}
+{% block chrome %}{% endblock %}
+{% block layout %}{% endblock %}
+{% block topbar %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<article style="max-width:28rem;margin:2rem auto">
-  <h1>Entrar</h1>
-  <p>Usa una passkey: tu huella, tu cara o el PIN de tu dispositivo. Sin contraseñas.</p>
-  <form id="acceso">
-    <label>
-      Correo
-      <input type="email" name="correo" required autocomplete="username webauthn">
-    </label>
-    <button type="submit" value="acceso">Entrar</button>
-    <button type="submit" value="registro" class="secondary">Crear cuenta</button>
-  </form>
-  <p id="mensaje" role="alert"></p>
-</article>
+<div class="min-h-screen flex items-center justify-center -m-4 md:-m-8">
+  <div class="w-full max-w-md rounded-xl bg-card border border-line shadow-sm p-8">
+    <div class="flex items-center gap-2 mb-6">
+      <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+      <span class="text-xl font-bold text-primary tracking-tight">ContadurIA</span>
+    </div>
+    <h1 class="text-2xl font-bold text-ink mb-1">Entrar</h1>
+    <p class="text-sm text-muted mb-6">Usa una passkey: tu huella, tu cara o el PIN de tu dispositivo. Sin contraseñas.</p>
+    <form id="acceso" class="space-y-4">
+      <label class="block">
+        <span class="text-sm font-medium text-ink">Correo</span>
+        <input type="email" name="correo" required autocomplete="username webauthn"
+               class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink focus:outline-none focus:border-primary">
+      </label>
+      <div class="flex gap-3">
+        <button type="submit" value="acceso"
+                class="flex-1 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">Entrar</button>
+        <button type="submit" value="registro"
+                class="flex-1 py-2.5 rounded border border-sand text-primary font-semibold hover:bg-sand-soft transition bg-transparent">Crear cuenta</button>
+      </div>
+    </form>
+    <p id="mensaje" role="alert" class="text-sm text-danger mt-4"></p>
+  </div>
+</div>
 <script src="/static/passkey.js"></script>
 {% endblock %}

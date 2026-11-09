@@ -51,6 +51,16 @@ pub struct FilaDeducible {
 #[derive(Deserialize)]
 pub struct Params {
     anio: Option<i32>,
+    /// Monto deducible extra a simular (ej. aportación a PPR o gasto médico).
+    simular: Option<Decimal>,
+}
+
+fn favor_cargo(resultado: Decimal) -> (String, String) {
+    if resultado < Decimal::ZERO {
+        (pesos(-resultado), String::new())
+    } else {
+        (String::new(), pesos(resultado))
+    }
 }
 
 #[derive(Template, WebTemplate)]
@@ -61,6 +71,7 @@ pub struct Pagina {
     ingreso: String,
     deducciones: String,
     tope: String,
+    tope_restante: String,
     base: String,
     isr_causado: String,
     subsidio: String,
@@ -71,6 +82,19 @@ pub struct Pagina {
     // Pistas para pedir facturas.
     gastos_sin_factura: String,
     n_sin_factura: i64,
+    // Simulador de deducciones.
+    sim_mostrar: bool,
+    sim_input: String,
+    sim_monto: String,
+    sim_a_favor: String,
+    sim_a_cargo: String,
+    sim_ahorro: String,
+    // Proyección de cierre de año.
+    proy_mostrar: bool,
+    proy_meses: i64,
+    proy_ingreso: String,
+    proy_a_favor: String,
+    proy_a_cargo: String,
 }
 
 /// Resultado del cálculo anual (números crudos, para la página y el expediente).
@@ -87,7 +111,7 @@ pub struct Calculo {
     pub resultado: Decimal, // negativo = saldo a favor
 }
 
-async fn calcular(db: &sqlx::PgPool, id: uuid::Uuid, anio: i32) -> Result<(Calculo, Vec<(String, i64, Decimal)>), AppError> {
+pub async fn calcular(db: &sqlx::PgPool, id: uuid::Uuid, anio: i32) -> Result<(Calculo, Vec<(String, i64, Decimal)>), AppError> {
     // Nómina del ejercicio.
     let xmls: Vec<(String,)> = sqlx::query_as(
         "SELECT xml FROM cfdis WHERE usuario_id = $1 AND tipo = 'N' AND EXTRACT(YEAR FROM fecha) = $2",
@@ -161,11 +185,8 @@ pub async fn pagina(
         })
         .collect();
 
-    let (a_favor, a_cargo) = if c.resultado < Decimal::ZERO {
-        (pesos(-c.resultado), String::new())
-    } else {
-        (String::new(), pesos(c.resultado))
-    };
+    let (a_favor, a_cargo) = favor_cargo(c.resultado);
+    let tope_restante = (c.tope - c.deducciones).max(Decimal::ZERO);
 
     let (n_sin_factura, gastos_sin_factura): (i64, Decimal) = sqlx::query_as(
         "SELECT count(*), COALESCE(SUM(cargo),0)
@@ -178,12 +199,51 @@ pub async fn pagina(
     .fetch_one(&st.db)
     .await?;
 
+    // --- Simulador: deducible extra, limitado por el tope restante ---
+    let sim = q.simular.unwrap_or(Decimal::ZERO).max(Decimal::ZERO);
+    let sim_mostrar = sim > Decimal::ZERO && !c.sin_tabla;
+    let (mut sim_a_favor, mut sim_a_cargo, mut sim_ahorro) = (String::new(), String::new(), String::new());
+    if sim_mostrar {
+        let nueva_ded = (c.deducciones + sim).min(c.tope);
+        let nueva_base = (c.ingreso - nueva_ded).max(Decimal::ZERO);
+        let nuevo_isr = fiscal::isr_anual(anio, nueva_base).unwrap_or(c.isr_causado);
+        let nuevo_resultado = nuevo_isr - c.subsidio - c.retenido;
+        let (f, cg) = favor_cargo(nuevo_resultado);
+        sim_a_favor = f;
+        sim_a_cargo = cg;
+        sim_ahorro = pesos((c.isr_causado - nuevo_isr).max(Decimal::ZERO));
+    }
+
+    // --- Proyección de cierre de año (solo el año en curso, con datos parciales) ---
+    let meses: i64 = sqlx::query_scalar(
+        "SELECT count(DISTINCT EXTRACT(MONTH FROM fecha))::bigint
+         FROM cfdis WHERE usuario_id = $1 AND tipo = 'N' AND EXTRACT(YEAR FROM fecha) = $2",
+    )
+    .bind(id)
+    .bind(anio)
+    .fetch_one(&st.db)
+    .await?;
+    let proy_mostrar = anio == crate::ahora_mx().date().year() && (1..12).contains(&meses) && !c.sin_tabla;
+    let (mut proy_ingreso, mut proy_a_favor, mut proy_a_cargo) = (String::new(), String::new(), String::new());
+    if proy_mostrar {
+        let factor = Decimal::from(12) / Decimal::from(meses);
+        let ingreso_a = (c.ingreso * factor).round_dp(2);
+        let base_a = (ingreso_a - c.deducciones).max(Decimal::ZERO);
+        let isr_a = fiscal::isr_anual(anio, base_a).unwrap_or(Decimal::ZERO);
+        let resultado_a = isr_a - c.subsidio * factor - c.retenido * factor;
+        let (f, cg) = favor_cargo(resultado_a);
+        proy_ingreso = pesos(ingreso_a);
+        proy_a_favor = f;
+        proy_a_cargo = cg;
+    }
+
     Ok(Pagina {
         anio,
         sin_tabla: c.sin_tabla,
         ingreso: pesos(c.ingreso),
         deducciones: pesos(c.deducciones),
         tope: pesos(c.tope),
+        tope_restante: pesos(tope_restante),
         base: pesos(c.base),
         isr_causado: pesos(c.isr_causado),
         subsidio: pesos(c.subsidio),
@@ -193,6 +253,17 @@ pub async fn pagina(
         deducibles,
         gastos_sin_factura: pesos(gastos_sin_factura),
         n_sin_factura,
+        sim_mostrar,
+        sim_input: if sim > Decimal::ZERO { sim.normalize().to_string() } else { String::new() },
+        sim_monto: pesos(sim),
+        sim_a_favor,
+        sim_a_cargo,
+        sim_ahorro,
+        proy_mostrar,
+        proy_meses: meses,
+        proy_ingreso,
+        proy_a_favor,
+        proy_a_cargo,
     })
 }
 

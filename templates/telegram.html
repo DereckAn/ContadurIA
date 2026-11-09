@@ -1,22 +1,34 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Alertas por Telegram</h1>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Alertas por Telegram</h1>
+  <p class="text-muted mt-1">Recibe recordatorios de tus obligaciones fiscales en Telegram.</p>
+</div>
 
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm max-w-xl">
 {% if conectado %}
-<p><mark>Telegram conectado.</mark> Te avisaré por aquí de tus obligaciones y del informe mensual.</p>
-<form method="post" action="/telegram/probar">
-  <button type="submit" class="outline">Enviar mensaje de prueba</button>
-</form>
+  <div class="flex items-center gap-2 mb-4">
+    <span class="material-symbols-outlined text-ok">check_circle</span>
+    <strong class="text-ink">Telegram conectado.</strong>
+  </div>
+  <p class="text-sm text-muted mb-4">Te avisaré por aquí de tus obligaciones y del informe mensual.</p>
+  <form method="post" action="/telegram/probar">
+    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded border border-sand text-primary font-semibold bg-transparent hover:bg-sand-soft transition">
+      <span class="material-symbols-outlined text-[18px]">send</span>Enviar mensaje de prueba
+    </button>
+  </form>
 {% else %}
-<p>Recibe recordatorios de tus obligaciones fiscales en Telegram.</p>
-<ol>
-  <li>Abre Telegram y busca <strong>@{{ usuario_bot }}</strong>.</li>
-  <li>Mándale el mensaje <code>/start</code>.</li>
-  <li>Regresa aquí y pulsa el botón.</li>
-</ol>
-<form method="post" action="/telegram/vincular">
-  <button type="submit">Vincular mi Telegram</button>
-</form>
+  <ol class="list-decimal list-inside space-y-1 text-ink mb-4">
+    <li>Abre Telegram y busca <strong>@{{ usuario_bot }}</strong>.</li>
+    <li>Mándale el mensaje <code class="font-mono bg-surface px-1 rounded">/start</code>.</li>
+    <li>Regresa aquí y pulsa el botón.</li>
+  </ol>
+  <form method="post" action="/telegram/vincular">
+    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
+      <span class="material-symbols-outlined text-[18px]">link</span>Vincular mi Telegram
+    </button>
+  </form>
 {% endif %}
+</div>
 {% endblock %}

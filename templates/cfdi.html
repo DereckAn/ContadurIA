@@ -1,27 +1,45 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Mis CFDI</h1>
-<form method="post" action="/cfdi/validar" style="margin-bottom:1rem">
-  <button type="submit" class="outline">Validar con el SAT</button>
-  <small>Consulta en el SAT si cada CFDI sigue vigente o fue cancelado. Puede tardar un poco.</small>
-</form>
-<div class="overflow-auto">
-  <table>
-    <thead><tr><th>Fecha</th><th></th><th>Tipo</th><th>Contraparte</th><th>Uso</th><th>Total</th><th>Estado SAT</th></tr></thead>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Mis CFDI</h1>
+    <p class="text-muted mt-1">Tus comprobantes fiscales descargados del SAT.</p>
+  </div>
+  <form method="post" action="/cfdi/validar">
+    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded border border-sand text-primary font-semibold bg-transparent hover:bg-sand-soft transition">
+      <span class="material-symbols-outlined text-[18px]">verified</span>Validar con el SAT
+    </button>
+  </form>
+</div>
+<p class="text-xs text-muted mb-3">La validación consulta en el SAT si cada CFDI sigue vigente o fue cancelado. Puede tardar un poco.</p>
+
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Fecha</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Tipo</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Contraparte</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Uso</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Total</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Estado SAT</th>
+    </tr></thead>
     <tbody>
       {% for f in filas %}
-      <tr>
-        <td>{{ f.fecha_texto() }}</td>
-        <td>{% if f.emitido %}Emitido{% else %}Recibido{% endif %}</td>
-        <td>{{ f.tipo_texto() }}</td>
-        <td>{{ f.contraparte }}</td>
-        <td>{{ f.uso_cfdi }}</td>
-        <td style="text-align:right">{{ f.total_texto() }}</td>
-        <td>{{ f.estado_texto() }}</td>
+      <tr class="border-t border-line">
+        <td class="px-4 py-3 whitespace-nowrap">{{ f.fecha_texto() }}</td>
+        <td class="px-4 py-3">
+          {% if f.emitido %}<span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-ok-soft text-ok">Emitido</span>
+          {% else %}<span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-sand-soft text-sand">Recibido</span>{% endif %}
+          <span class="text-muted ml-1">{{ f.tipo_texto() }}</span>
+        </td>
+        <td class="px-4 py-3">{{ f.contraparte }}</td>
+        <td class="px-4 py-3">{{ f.uso_cfdi }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.total_texto() }}</td>
+        <td class="px-4 py-3">{{ f.estado_texto() }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="7">Aún no hay CFDI. <a href="/sat">Sincroniza con el SAT</a>.</td></tr>
+      <tr class="border-t border-line"><td colspan="6" class="px-4 py-6 text-center text-muted">Aún no hay CFDI. <a href="/sat" class="text-primary underline">Sincroniza con el SAT</a>.</td></tr>
       {% endfor %}
     </tbody>
   </table>

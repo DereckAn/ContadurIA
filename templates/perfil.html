@@ -1,33 +1,45 @@
 {% extends "base.html" %}
-{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block mainmod %}{% endblock %}
 {% block contenido %}
-<h1>Perfil fiscal</h1>
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Perfil fiscal</h1>
+  <p class="text-muted mt-1">Tus datos para calcular obligaciones e impuestos.</p>
+</div>
+
 {% if let Some(e) = error %}
-<p role="alert"><mark>{{ e }}</mark></p>
+<div class="rounded-xl bg-danger-soft border border-line border-l-4 border-l-danger p-4 mb-4 text-ink" role="alert">{{ e }}</div>
 {% endif %}
-<form method="post">
-  <label>
-    Nombre
-    <input name="nombre" value="{{ perfil.nombre }}" required maxlength="200">
+
+<form method="post" class="rounded-xl bg-card border border-line p-6 shadow-sm max-w-2xl space-y-5">
+  <label class="block">
+    <span class="text-sm font-medium text-ink">Nombre</span>
+    <input name="nombre" value="{{ perfil.nombre }}" required maxlength="200"
+           class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink focus:outline-none focus:border-primary">
   </label>
-  <label>
-    RFC
-    <input name="rfc" value="{{ perfil.rfc }}" required minlength="13" maxlength="13"
-           placeholder="XAXX010101000" style="text-transform:uppercase">
+  <label class="block">
+    <span class="text-sm font-medium text-ink">RFC</span>
+    <input name="rfc" value="{{ perfil.rfc }}" required minlength="13" maxlength="13" placeholder="XAXX010101000"
+           class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink uppercase font-mono focus:outline-none focus:border-primary">
   </label>
-  <fieldset>
-    <legend>Regímenes fiscales</legend>
-    {% for (codigo, nombre) in regimenes %}
-    <label>
-      <input type="checkbox" name="regimenes" value="{{ codigo }}" {% if perfil.tiene(codigo) %}checked{% endif %}>
-      {{ codigo }} · {{ nombre }}
-    </label>
-    {% endfor %}
+  <fieldset class="border border-line rounded-lg p-4">
+    <legend class="text-sm font-semibold text-ink px-1">Regímenes fiscales</legend>
+    <div class="space-y-2 mt-1">
+      {% for (codigo, nombre) in regimenes %}
+      <label class="flex items-center gap-2 text-ink">
+        <input type="checkbox" name="regimenes" value="{{ codigo }}" {% if perfil.tiene(codigo) %}checked{% endif %}
+               class="w-4 h-4 accent-primary">
+        <span><span class="font-mono text-sm">{{ codigo }}</span> · {{ nombre }}</span>
+      </label>
+      {% endfor %}
+    </div>
   </fieldset>
-  <label>
-    Vencimiento de tu e.firma (opcional)
-    <input type="date" name="efirma_vence" value="{{ perfil.efirma_valor() }}">
+  <label class="block">
+    <span class="text-sm font-medium text-ink">Vencimiento de tu e.firma (opcional)</span>
+    <input type="date" name="efirma_vence" value="{{ perfil.efirma_valor() }}"
+           class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink focus:outline-none focus:border-primary">
   </label>
-  <button type="submit">Guardar</button>
+  <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
+    <span class="material-symbols-outlined text-[18px]">save</span>Guardar
+  </button>
 </form>
 {% endblock %}

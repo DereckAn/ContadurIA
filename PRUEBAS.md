@@ -69,6 +69,9 @@ Leyenda de datos de prueba: RFC del usuario `AEMD980715TY3`, e.firma en `~/.efir
 | 5.6 | Pagos RESICO | Cambia a 626 y abre `/pagos` | Tabla con tasa fija sobre lo cobrado | ☐ |
 | 5.7 | Pagos 612/606/625 | Cambia régimen y abre `/pagos` | Tarifa acumulada 2026, fecha límite día 17 | ☐ |
 | 5.8 | Año sin tabla | `/anual?anio=2025` | Avisa que solo hay tarifa 2026 | ☐ |
+| 5.9 | Simulador de deducciones | En `/anual`, escribe un monto (ej. 20000) → "Simular" | Muestra el nuevo resultado y el ISR que ahorras; respeta el tope | ☐ |
+| 5.10 | Simular arriba del tope | Simula un monto mayor al tope restante | El ahorro se limita al tope, no crece de más | ☐ |
+| 5.11 | Proyección de cierre | `/anual` del año en curso con meses parciales | Muestra cómo cerrará el año y sugiere actuar antes del 31 dic | ☐ |
 
 ## 6. Discrepancias
 
@@ -114,6 +117,26 @@ Leyenda de datos de prueba: RFC del usuario `AEMD980715TY3`, e.firma en `~/.efir
 | 10.2 | Ollama apagado | Detén Ollama y sube un banco no-BBVA | Error claro pedible reintentar | ☐ |
 | 10.3 | SAT caído | Intenta sincronizar/validar sin red | Error claro, la app sigue viva | ☐ |
 | 10.4 | Montos grandes | CFDI/movimientos de millones | Se muestran y suman sin perder centavos | ☐ |
+
+## 11. Panel y salud fiscal
+
+| # | Caso | Pasos | Resultado esperado | OK |
+|---|------|-------|--------------------|----|
+| 11.1 | Semáforo | Abre `/panel` | Focos ✅/⚠️/🔴 según obligaciones, saldo, discrepancias y e.firma | ☐ |
+| 11.2 | KPIs | Revisa las tarjetas | Ingresos, saldo a favor/cargo, CFDI del año y próxima obligación correctos | ☐ |
+| 11.3 | Barra del tope | Revisa la barra de deducciones | Muestra usado vs tope con barra de progreso | ☐ |
+| 11.4 | Recordatorio de devolución | Usuario con saldo a favor | Aparece el aviso verde con enlace a la declaración | ☐ |
+| 11.5 | Obligación vencida | Usuario con una obligación pasada | Foco rojo "obligación vencida" | ☐ |
+| 11.6 | Sin perfil | Usuario nuevo sin perfil abre `/panel` | Redirige a `/perfil` | ☐ |
+
+## 12. Explicaciones en lenguaje claro
+
+| # | Caso | Pasos | Resultado esperado | OK |
+|---|------|-------|--------------------|----|
+| 12.1 | Anual | Abre "¿Qué significa esto?" en `/anual` | Explica ISR causado, retenido, saldo a favor y deducciones | ☐ |
+| 12.2 | IVA | Abre el detalle en `/iva` | Explica trasladado vs acreditable | ☐ |
+| 12.3 | Pagos | Abre el detalle en `/pagos` | Explica qué son los pagos provisionales | ☐ |
+| 12.4 | Discrepancias | Abre el detalle en `/discrepancias` | Explica la discrepancia fiscal (art. 91) | ☐ |
 
 ---
 
