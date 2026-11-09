@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens Fiscal Serenity */
+:root {
+  --bg:#eef4ed; --surface:#f4fbf3; --card:#ffffff; --ink:#161d19; --muted:#5c665e; --line:#dde4dd;
+  --primary:#1e3b2f; --on-primary:#ffffff; --primary-soft:#dae8c0;
+  --sand:#c8b48a; --sand-soft:#f1ead9;
+  --ok:#1b6b44; --ok-soft:#e8f3ec; --warn:#b8860b; --warn-soft:#fef6e7; --danger:#c53030; --danger-soft:#fde8e8;
+}
+.dark {
+  --bg:#121a15; --surface:#161d19; --card:#1b241e; --ink:#e8ebe4; --muted:#9da99f; --line:#2d3930;
+  --primary:#7ca38c; --on-primary:#07251a; --primary-soft:#24352b;
+  --sand:#d9c499; --sand-soft:#2a2512;
+  --ok:#4ea87b; --ok-soft:#14301f; --warn:#d9a441; --warn-soft:#2e2510; --danger:#e06a6a; --danger-soft:#2e1414;
+}
+body { font-family: Inter, system-ui, sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-size: 20px; line-height: 1; }
+.tnum { font-variant-numeric: tabular-nums lining-nums; }
+.nav-link { color: var(--muted); }
+.nav-link:hover { background: var(--primary-soft); color: var(--ink); }
+.nav-link.active { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+
+/* Estilos base para páginas no migradas a Tailwind (respaldo) */
+main.legacy h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 .75rem; }
+main.legacy h2 { font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 .5rem; }
+main.legacy h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+main.legacy p { margin: .5rem 0; color: var(--ink); }
+main.legacy a { color: var(--primary); text-decoration: underline; }
+main.legacy small { color: var(--muted); }
+main.legacy article { background: var(--card); border: 1px solid var(--line); border-radius: .5rem; padding: 1rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(30,59,47,.04); }
+main.legacy .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+main.legacy table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; }
+main.legacy th, main.legacy td { padding: .6rem .75rem; border-bottom: 1px solid var(--line); text-align: left; }
+main.legacy th { background: var(--surface); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+main.legacy .overflow-auto { overflow-x: auto; }
+main.legacy label { display: block; margin: .5rem 0 .25rem; font-weight: 500; }
+main.legacy input, main.legacy select, main.legacy textarea { font: inherit; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: .25rem; background: var(--card); color: var(--ink); max-width: 28rem; width: 100%; }
+main.legacy input[type=checkbox] { width: auto; }
+main.legacy button, main.legacy [role=button] { font: inherit; display: inline-block; padding: .55rem .9rem; border-radius: .25rem; border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); cursor: pointer; text-decoration: none; }
+main.legacy button.outline, main.legacy .outline { background: transparent; color: var(--primary); border-color: var(--sand); }
+main.legacy .secondary { background: var(--muted); border-color: var(--muted); color: #fff; }
+main.legacy progress { width: 100%; height: .6rem; }
+main.legacy details { background: var(--card); border: 1px solid var(--line); border-radius: .5rem; padding: .75rem 1rem; margin: 1rem 0; }
+main.legacy summary { cursor: pointer; font-weight: 600; }
+main.legacy mark { background: var(--warn-soft); color: var(--ink); padding: .1rem .3rem; border-radius: .25rem; }
+main.legacy ul#bitacora { list-style: none; padding: 0; font-family: 'JetBrains Mono', monospace; font-size: .85rem; }

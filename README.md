@@ -56,3 +56,18 @@ migrations/        esquema de Postgres
 Los mensajes al SAT se prueban contra los de
 [phpcfdi/sat-ws-descarga-masiva](https://github.com/phpcfdi/sat-ws-descarga-masiva) (MIT),
 con su e.firma de pruebas `EKU9003173C9` en `efirma/pruebas/`.
+
+## Estilos (Tailwind sin Node)
+
+El CSS se compila con el binario `tailwindcss` (standalone, no requiere Node) a `static/estilo.css`.
+
+```bash
+# una sola vez: descarga el binario (ignorado por git)
+curl -sL -o tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64
+chmod +x tailwindcss
+
+# cada vez que cambien templates/ o styles/input.css:
+./build-css.sh
+```
+
+Tailwind descarta las clases que no aparecen en `templates/`, así que **si agregas clases nuevas en una plantilla, vuelve a correr `./build-css.sh`** o no se verán. `static/estilo.css` sí se versiona (se sirve tal cual); el binario `tailwindcss` no.

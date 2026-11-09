@@ -1,3 +1,5 @@
 /target
 static/efirma/
 .env
+/tailwindcss
+styles/.cache
