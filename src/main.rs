@@ -1,7 +1,9 @@
+mod anual;
 mod auth;
 mod banco;
 mod calendario;
 mod cfdi;
+mod fiscal;
 mod informe;
 mod perfil;
 mod resumen;
@@ -104,6 +106,7 @@ async fn main() {
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
         .route("/resumen", get(resumen::pagina))
+        .route("/anual", get(anual::pagina))
         .route("/informe", get(informe::pagina))
         .route("/informe/enviar", post(informe::enviar_handler))
         .route("/telegram", get(telegram::pagina))

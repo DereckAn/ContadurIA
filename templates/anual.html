@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Declaración anual {{ anio }}</h1>
+<p>Estimación de tu ISR del ejercicio a partir de tu nómina. <strong>No es un cálculo oficial;</strong> verifica en el SAT antes de presentar.</p>
+
+{% if sin_tabla %}
+<p><mark>Aún no tengo la tarifa oficial de {{ anio }}. Esta estimación aplica solo al ejercicio 2026.</mark></p>
+{% endif %}
+
+<div class="overflow-auto">
+  <table>
+    <tbody>
+      <tr><td>Ingresos por sueldos (gravado)</td><td style="text-align:right">{{ ingreso }}</td></tr>
+      <tr><td>− Deducciones personales <small>(tope {{ tope }})</small></td><td style="text-align:right">{{ deducciones }}</td></tr>
+      <tr><td><strong>Base gravable</strong></td><td style="text-align:right"><strong>{{ base }}</strong></td></tr>
+      <tr><td>ISR causado (tarifa anual)</td><td style="text-align:right">{{ isr_causado }}</td></tr>
+      <tr><td>− Subsidio al empleo</td><td style="text-align:right">{{ subsidio }}</td></tr>
+      <tr><td>− ISR retenido por tu patrón</td><td style="text-align:right">{{ retenido }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% if a_favor != "" %}
+<article style="border-left:4px solid green"><strong>Saldo a favor: {{ a_favor }}</strong><br><small>El SAT podría devolverte este monto.</small></article>
+{% else %}
+<article style="border-left:4px solid #b00"><strong>ISR a cargo: {{ a_cargo }}</strong><br><small>Esto es lo que tendrías que pagar al presentar.</small></article>
+{% endif %}
+
+<h2>Deducciones personales detectadas</h2>
+{% if deducibles.is_empty() %}
+<p>No encontré CFDI deducibles este año. Para bajar tu impuesto (o aumentar tu saldo a favor), pide factura de: gastos médicos y dentales, lentes, primas de seguro de gastos médicos, colegiaturas, intereses de tu crédito hipotecario, o haz aportaciones a un PPR.</p>
+{% else %}
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Concepto</th><th>CFDI</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>
+      {% for d in deducibles %}
+      <tr><td>{{ d.concepto }}</td><td>{{ d.cuenta }}</td><td style="text-align:right">{{ d.monto }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2>Facturas que te faltan</h2>
+<p>Tienes <strong>{{ n_sin_factura }}</strong> gastos en el banco sin CFDI, por <strong>{{ gastos_sin_factura }}</strong>. Si alguno es deducible (médico, colegiatura, etc.), pide la factura con tu RFC. <a href="/banco">Ver movimientos</a></p>
+
+<p><small>La tarifa anual 2026 es del Anexo 8 de la RMF 2026 (DOF 28-dic-2025). UMA 2026 del INEGI.</small></p>
+{% endblock %}
