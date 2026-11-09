@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Pagos provisionales {{ anio }}</h1>
+
+{% match regimen %}
+{% when Some(r) %}
+<p>Régimen: <strong>{{ r }}</strong>. Anticipos mensuales de ISR; vencen el día 17 del mes siguiente.</p>
+{% if sin_tabla %}<p><mark>Solo tengo la tarifa de 2026; cámbialo con ?anio=2026.</mark></p>{% endif %}
+
+<div class="overflow-auto">
+  <table>
+    <thead><tr>
+      <th>Mes</th>
+      <th style="text-align:right">{% if es_resico %}Ingresos del mes{% else %}Ingresos acum.{% endif %}</th>
+      <th style="text-align:right">Deducciones</th>
+      <th style="text-align:right">Base</th>
+      <th style="text-align:right">Pago del mes</th>
+      <th>Fecha límite</th>
+    </tr></thead>
+    <tbody>
+      {% for f in filas %}
+      <tr>
+        <td>{{ f.mes }}</td>
+        <td style="text-align:right">{{ f.ingresos }}</td>
+        <td style="text-align:right">{{ f.deducciones }}</td>
+        <td style="text-align:right">{{ f.base }}</td>
+        <td style="text-align:right"><strong>{{ f.pago }}</strong></td>
+        <td>{{ f.limite }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">No hay ingresos facturados en {{ anio }}. Cuando emitas CFDI, aquí verás tu pago mensual.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p>Total de ISR provisional del año: <strong>{{ total }}</strong></p>
+<p><small>Estimación con la tarifa 2026. No incluye retenciones ni PTU; no es un cálculo oficial. Para arrendamiento (606) no considera aún la deducción ciega del 35%.</small></p>
+
+{% when None %}
+<p>Tu régimen fiscal no hace pagos provisionales mensuales de ISR. Si eres sueldos y salarios (605), tu patrón ya retiene el ISR cada periodo.</p>
+<p>Si te das de alta en RESICO (626), actividad empresarial (612), arrendamiento (606) o plataformas (625), agrega el régimen en tu <a href="/perfil">perfil</a> y aquí aparecerá el cálculo.</p>
+{% endmatch %}
+{% endblock %}

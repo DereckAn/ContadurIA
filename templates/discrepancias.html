@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>Discrepancias {{ anio }}</h1>
+<p>Focos rojos que el SAT podría revisar. Revísalos antes que ellos.</p>
+
+<h2>Depósitos sin respaldo</h2>
+<p>De <strong>{{ depositos_total }}</strong> que entraron a tu banco, <strong>{{ sin_respaldo_total }}</strong> no están respaldados por un CFDI ni por tu nómina. Si son ingresos, podrían considerarse no declarados (art. 91 LISR). Si son traspasos entre tus cuentas o préstamos, conserva el comprobante.</p>
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right">Depósito</th></tr></thead>
+    <tbody>
+      {% for d in sin_respaldo %}
+      <tr><td>{{ d.fecha_texto() }}</td><td>{{ d.descripcion }}</td><td style="text-align:right">{{ d.monto_texto() }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">Todos tus depósitos están respaldados. 👍</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>CFDI cancelados</h2>
+<p>CFDI que el SAT ya no reconoce como vigentes. Si los contaste como ingreso o deducción, quítalos.</p>
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Fecha</th><th>Emisor</th><th style="text-align:right">Total</th><th>Estado</th></tr></thead>
+    <tbody>
+      {% for c in cancelados %}
+      <tr><td>{{ c.fecha_texto() }}</td><td>{{ c.emisor() }}</td><td style="text-align:right">{{ c.total_texto() }}</td><td>{{ c.estado() }}</td></tr>
+      {% else %}
+      <tr><td colspan="4">No hay CFDI cancelados. Corre "Validar con el SAT" en CFDI para revisar.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><small>Orientativo, no es una auditoría oficial. Un traspaso entre tus propias cuentas no es ingreso, pero conviene poder comprobarlo.</small></p>
+{% endblock %}

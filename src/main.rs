@@ -3,9 +3,11 @@ mod auth;
 mod banco;
 mod calendario;
 mod cfdi;
+mod discrepancias;
 mod fiscal;
 mod informe;
 mod iva;
+mod pagos;
 mod perfil;
 mod resumen;
 mod sat;
@@ -118,6 +120,8 @@ async fn main() {
         .route("/banco/subir", post(banco::subir))
         .route("/banco/conciliar", post(banco::conciliar_handler))
         .route("/iva", get(iva::pagina))
+        .route("/pagos", get(pagos::pagina))
+        .route("/discrepancias", get(discrepancias::pagina))
         .route("/cfdi", get(cfdi::pagina))
         .route("/cfdi/validar", post(cfdi::validar))
         .route("/sat", get(sat::pagina))
