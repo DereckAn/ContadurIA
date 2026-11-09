@@ -5,6 +5,7 @@ mod calendario;
 mod cfdi;
 mod fiscal;
 mod informe;
+mod iva;
 mod perfil;
 mod resumen;
 mod sat;
@@ -107,6 +108,7 @@ async fn main() {
         .route("/auth/acceso/fin", post(auth::acceso_fin))
         .route("/resumen", get(resumen::pagina))
         .route("/anual", get(anual::pagina))
+        .route("/anual/expediente", get(anual::expediente))
         .route("/informe", get(informe::pagina))
         .route("/informe/enviar", post(informe::enviar_handler))
         .route("/telegram", get(telegram::pagina))
@@ -115,7 +117,9 @@ async fn main() {
         .route("/banco", get(banco::pagina))
         .route("/banco/subir", post(banco::subir))
         .route("/banco/conciliar", post(banco::conciliar_handler))
+        .route("/iva", get(iva::pagina))
         .route("/cfdi", get(cfdi::pagina))
+        .route("/cfdi/validar", post(cfdi::validar))
         .route("/sat", get(sat::pagina))
         .route("/sat/pendientes", get(sat::pendientes))
         .route("/sat/enviar", post(sat::enviar))

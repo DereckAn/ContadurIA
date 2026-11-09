@@ -27,6 +27,9 @@
 <article style="border-left:4px solid #b00"><strong>ISR a cargo: {{ a_cargo }}</strong><br><small>Esto es lo que tendrías que pagar al presentar.</small></article>
 {% endif %}
 
+<p><a href="/anual/expediente?anio={{ anio }}" role="button" class="outline">Descargar expediente (ZIP)</a></p>
+<small>El ZIP incluye el resumen del cálculo, un CSV de todos tus CFDI del año y los XML originales.</small>
+
 <h2>Deducciones personales detectadas</h2>
 {% if deducibles.is_empty() %}
 <p>No encontré CFDI deducibles este año. Para bajar tu impuesto (o aumentar tu saldo a favor), pide factura de: gastos médicos y dentales, lentes, primas de seguro de gastos médicos, colegiaturas, intereses de tu crédito hipotecario, o haz aportaciones a un PPR.</p>

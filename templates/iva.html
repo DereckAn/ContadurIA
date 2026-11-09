@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block menu %}{% include "menu.html" %}{% endblock %}
+{% block contenido %}
+<h1>IVA {{ anio }}</h1>
+<p>IVA que cobraste (trasladado) menos el que pagaste (acreditable). Positivo = a pagar; negativo = a favor.</p>
+
+<div class="grid">
+  <article><hgroup><h3>{{ trasladado }}</h3><p>IVA trasladado</p></hgroup></article>
+  <article><hgroup><h3>{{ acreditable }}</h3><p>IVA acreditable</p></hgroup></article>
+  <article><hgroup><h3>{{ diferencia }}</h3><p>Diferencia</p></hgroup></article>
+</div>
+
+<div class="overflow-auto">
+  <table>
+    <thead><tr><th>Mes</th><th style="text-align:right">Trasladado</th><th style="text-align:right">Acreditable</th><th style="text-align:right">Diferencia</th></tr></thead>
+    <tbody>
+      {% for m in meses %}
+      <tr>
+        <td>{{ m.nombre() }}</td>
+        <td style="text-align:right">{{ m.trasladado_texto() }}</td>
+        <td style="text-align:right">{{ m.acreditable_texto() }}</td>
+        <td style="text-align:right">{{ m.diferencia_texto() }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Sin CFDI de ingreso en {{ anio }}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p><small>Aproximación (IVA = total − subtotal). No incluye retenciones ni IEPS, ni es un cálculo oficial.</small></p>
+{% endblock %}

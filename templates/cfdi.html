@@ -2,9 +2,13 @@
 {% block menu %}{% include "menu.html" %}{% endblock %}
 {% block contenido %}
 <h1>Mis CFDI</h1>
+<form method="post" action="/cfdi/validar" style="margin-bottom:1rem">
+  <button type="submit" class="outline">Validar con el SAT</button>
+  <small>Consulta en el SAT si cada CFDI sigue vigente o fue cancelado. Puede tardar un poco.</small>
+</form>
 <div class="overflow-auto">
   <table>
-    <thead><tr><th>Fecha</th><th></th><th>Tipo</th><th>Contraparte</th><th>Uso</th><th>Total</th></tr></thead>
+    <thead><tr><th>Fecha</th><th></th><th>Tipo</th><th>Contraparte</th><th>Uso</th><th>Total</th><th>Estado SAT</th></tr></thead>
     <tbody>
       {% for f in filas %}
       <tr>
@@ -14,9 +18,10 @@
         <td>{{ f.contraparte }}</td>
         <td>{{ f.uso_cfdi }}</td>
         <td style="text-align:right">{{ f.total_texto() }}</td>
+        <td>{{ f.estado_texto() }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="6">Aún no hay CFDI. <a href="/sat">Sincroniza con el SAT</a>.</td></tr>
+      <tr><td colspan="7">Aún no hay CFDI. <a href="/sat">Sincroniza con el SAT</a>.</td></tr>
       {% endfor %}
     </tbody>
   </table>

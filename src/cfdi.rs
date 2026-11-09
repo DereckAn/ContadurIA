@@ -4,7 +4,7 @@ use std::io::{Cursor, Read};
 
 use askama::Template;
 use askama_web::WebTemplate;
-use axum::extract::State;
+use axum::{extract::State, response::{IntoResponse, Redirect, Response}};
 use rust_decimal::Decimal;
 use time::{PrimitiveDateTime, macros::format_description};
 
@@ -19,6 +19,13 @@ pub struct Fila {
     uso_cfdi: String,
     total: Decimal,
     moneda: String,
+    estado_sat: Option<String>,
+}
+
+impl Fila {
+    pub fn estado_texto(&self) -> &str {
+        self.estado_sat.as_deref().unwrap_or("—")
+    }
 }
 
 impl Fila {
@@ -51,7 +58,7 @@ pub struct Pagina {
 pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
     // ponytail: últimos 200; paginar y filtrar por mes cuando llegue el informe mensual.
     let filas = sqlx::query_as(
-        "SELECT fecha, emitido, tipo, uso_cfdi, total, moneda,
+        "SELECT fecha, emitido, tipo, uso_cfdi, total, moneda, estado_sat,
                 CASE WHEN emitido THEN receptor_nombre || ' (' || receptor_rfc || ')'
                      ELSE emisor_nombre || ' (' || emisor_rfc || ')' END AS contraparte
          FROM cfdis WHERE usuario_id = $1 ORDER BY fecha DESC LIMIT 200",
@@ -60,6 +67,60 @@ pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
     .fetch_all(&st.db)
     .await?;
     Ok(Pagina { filas })
+}
+
+// --- Validación contra el SAT (servicio público ConsultaCFDIService) ---
+
+const SAT_CONSULTA: &str = "https://consultaqr.facturaelectronica.sat.gob.mx/ConsultaCFDIService.svc";
+
+fn escapar(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
+/// Consulta el estado de un CFDI en el SAT (Vigente / Cancelado / No Encontrado).
+async fn estado_sat(http: &reqwest::Client, emisor: &str, receptor: &str, total: &str, uuid: &str) -> Option<String> {
+    let expr = escapar(&format!("?re={emisor}&rr={receptor}&tt={total}&id={uuid}"));
+    let body = format!(
+        "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:tem=\"http://tempuri.org/\">\
+         <soapenv:Header/><soapenv:Body><tem:Consulta><tem:expresionImpresa>{expr}</tem:expresionImpresa></tem:Consulta></soapenv:Body></soapenv:Envelope>"
+    );
+    let t = http
+        .post(SAT_CONSULTA)
+        .header("Content-Type", "text/xml; charset=utf-8")
+        .header("SOAPAction", "http://tempuri.org/IConsultaCFDIService/Consulta")
+        .body(body)
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+    let ini = t.find("<a:Estado>")? + "<a:Estado>".len();
+    let fin = t[ini..].find("</a:Estado>")?;
+    Some(t[ini..ini + fin].to_string())
+}
+
+/// Valida todos los CFDI del usuario contra el SAT y guarda su estado.
+pub async fn validar(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Response, AppError> {
+    let cfdis: Vec<(String, String, String, Decimal)> = sqlx::query_as(
+        "SELECT uuid, emisor_rfc, receptor_rfc, total FROM cfdis WHERE usuario_id = $1",
+    )
+    .bind(id)
+    .fetch_all(&st.db)
+    .await?;
+    for (uuid, emisor, receptor, total) in cfdis {
+        if let Some(estado) = estado_sat(&st.http, &emisor, &receptor, &total.to_string(), &uuid).await {
+            sqlx::query("UPDATE cfdis SET estado_sat = $1, validado_en = now() WHERE usuario_id = $2 AND uuid = $3")
+                .bind(&estado)
+                .bind(id)
+                .bind(&uuid)
+                .execute(&st.db)
+                .await?;
+        }
+        // ponytail: en serie con pausa breve para no saturar al SAT; un trabajo en segundo plano si crece.
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    }
+    Ok(Redirect::to("/cfdi").into_response())
 }
 
 pub struct Cfdi {
