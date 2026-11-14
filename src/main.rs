@@ -5,6 +5,7 @@ mod calendario;
 mod cfdi;
 mod discrepancias;
 mod fiscal;
+mod gastos;
 mod informe;
 mod iva;
 mod pagos;
@@ -122,6 +123,9 @@ async fn main() {
         .route("/banco", get(banco::pagina))
         .route("/banco/subir", post(banco::subir).layer(DefaultBodyLimit::max(50 * 1024 * 1024)))
         .route("/banco/conciliar", post(banco::conciliar_handler))
+        .route("/gastos", get(gastos::pagina))
+        .route("/gastos/categoria", post(gastos::cambiar))
+        .route("/gastos/clasificar", post(gastos::clasificar))
         .route("/iva", get(iva::pagina))
         .route("/pagos", get(pagos::pagina))
         .route("/discrepancias", get(discrepancias::pagina))

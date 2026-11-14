@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">¿En qué se va tu dinero?</h1>
+  <p class="text-muted mt-1">Calculado con tus estados de cuenta. Corrige cualquier categoría al final de la página.</p>
+</div>
+
+{% if let Some(t) = t %}
+<p class="text-sm text-muted mb-4">Periodo: <strong class="text-ink">{{ t.periodo }}</strong></p>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm border-t-2 border-t-primary">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Gastaste</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">shopping_cart</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ t.consumo }}</div>
+    <div class="text-sm text-muted mt-1">≈ {{ t.al_mes }} al mes</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Entró a tu cuenta</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ t.entradas }}</div>
+    <div class="text-sm text-muted mt-1">Nómina, depósitos y transferencias recibidas</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Gastos hormiga</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">pest_control</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ t.hormiga_total_mes }}</div>
+    <div class="text-sm text-muted mt-1">al mes en compras chicas y frecuentes</div>
+  </div>
+</section>
+
+{% if !t.fuera.is_empty() %}
+<div class="rounded-xl bg-primary-soft border border-line border-l-4 border-l-primary p-4 mb-6 text-sm text-ink">
+  <strong>No cuentan como gasto:</strong>
+  {% for (nombre, monto) in t.fuera %}{{ nombre }} {{ monto }}{% if !loop.last %} · {% endif %}{% endfor %}.
+  Las transferencias pueden ser a tus propias cuentas o a otras personas; si alguna fue un pago, cámbiala de categoría abajo.
+</div>
+{% endif %}
+
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <h2 class="text-lg font-semibold text-ink mb-4">Por categoría</h2>
+    <ul class="space-y-4">
+      {% for b in t.categorias %}
+      <li title="{{ b.nombre }}: {{ b.monto }} ({{ b.porcentaje }}% de tu gasto)">
+        <div class="flex items-center justify-between text-sm mb-1">
+          <span class="text-ink">{{ b.nombre }}</span>
+          <span class="tnum text-muted"><strong class="text-ink">{{ b.monto }}</strong> · {{ b.porcentaje }}%</span>
+        </div>
+        <div class="w-full h-2.5 rounded-full bg-line overflow-hidden">
+          <div class="h-full bg-primary rounded-full" style="width: {{ b.ancho }}%"></div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <h2 class="text-lg font-semibold text-ink mb-4">Por mes</h2>
+    <ul class="space-y-4">
+      {% for b in t.meses %}
+      <li title="{{ b.nombre }}: {{ b.monto }}">
+        <div class="flex items-center justify-between text-sm mb-1">
+          <span class="text-ink">{{ b.nombre }}{% if t.hay_parcial && (loop.first || loop.last) %} <span class="text-muted">(parcial)</span>{% endif %}</span>
+          <strong class="tnum text-ink">{{ b.monto }}</strong>
+        </div>
+        <div class="w-full h-2.5 rounded-full bg-line overflow-hidden">
+          <div class="h-full bg-primary rounded-full" style="width: {{ b.ancho }}%"></div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if t.hay_parcial %}<p class="text-xs text-muted mt-3">El primer y último mes están incompletos: tus estados no empiezan el día 1.</p>{% endif %}
+  </div>
+</section>
+
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <h2 class="text-lg font-semibold text-ink">Suscripciones y pagos fijos</h2>
+    <p class="text-sm text-muted mb-3">Mismo comercio, monto parecido, cada mes. ¿Sigues usando todas?</p>
+    {% if t.suscripciones.is_empty() %}
+    <p class="text-sm text-muted">No se detectaron.</p>
+    {% else %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-muted"><tr>
+          <th class="text-left font-semibold uppercase text-[11px] tracking-wider py-2">Comercio</th>
+          <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Cobro</th>
+          <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Al año</th>
+        </tr></thead>
+        <tbody>
+          {% for s in t.suscripciones %}
+          <tr class="border-t border-line">
+            <td class="py-2 text-ink">{{ s.nombre }} <span class="text-muted text-xs">· {{ s.meses }} meses</span></td>
+            <td class="py-2 text-right tnum">{{ s.tipico }}</td>
+            <td class="py-2 text-right tnum font-semibold text-ink">{{ s.al_anio }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <h2 class="text-lg font-semibold text-ink">Gastos hormiga</h2>
+    <p class="text-sm text-muted mb-3">Compras chicas que se repiten mucho y suman.</p>
+    {% if t.hormiga.is_empty() %}
+    <p class="text-sm text-muted">No se detectaron.</p>
+    {% else %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-muted"><tr>
+          <th class="text-left font-semibold uppercase text-[11px] tracking-wider py-2">Comercio</th>
+          <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Veces</th>
+          <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Al mes</th>
+          <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Al año</th>
+        </tr></thead>
+        <tbody>
+          {% for h in t.hormiga %}
+          <tr class="border-t border-line">
+            <td class="py-2 text-ink">{{ h.nombre }} <span class="text-muted text-xs">· {{ h.tipico }} c/u</span></td>
+            <td class="py-2 text-right tnum">{{ h.cargos }}</td>
+            <td class="py-2 text-right tnum">{{ h.al_mes }}</td>
+            <td class="py-2 text-right tnum font-semibold text-ink">{{ h.al_anio }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section id="comercios" class="mb-6">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+    <div>
+      <h2 class="text-lg font-semibold text-ink">Comercios</h2>
+      <p class="text-sm text-muted">Cambia la categoría de un comercio y se aplica a todos sus cargos.</p>
+    </div>
+    {% if t.sin_categoria > 0 %}
+    <form method="post" action="/gastos/clasificar">
+      <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded border border-sand text-primary font-semibold bg-transparent hover:bg-sand-soft transition">
+        <span class="material-symbols-outlined text-[18px]">auto_awesome</span>Clasificar {{ t.sin_categoria }} con IA
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="overflow-x-auto rounded-xl border border-line bg-card">
+    <table class="w-full text-sm">
+      <thead class="bg-surface text-muted"><tr>
+        <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Comercio</th>
+        <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Cargos</th>
+        <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Total</th>
+        <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Categoría</th>
+      </tr></thead>
+      <tbody>
+        {% for k in t.comercios %}
+        <tr class="border-t border-line">
+          <td class="px-4 py-2 text-ink">{{ k.nombre }}</td>
+          <td class="px-4 py-2 text-right tnum">{{ k.cargos }}</td>
+          <td class="px-4 py-2 text-right tnum font-semibold">{{ k.total }}</td>
+          <td class="px-4 py-2">
+            <form method="post" action="/gastos/categoria">
+              <input type="hidden" name="comercio" value="{{ k.nombre }}">
+              <select name="categoria" aria-label="Categoría de {{ k.nombre }}" onchange="this.form.requestSubmit()"
+                      class="px-2 py-1 rounded border border-line bg-card text-ink">
+                {% for c in categorias %}<option{% if k.es(c) %} selected{% endif %}>{{ c }}</option>{% endfor %}
+              </select>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% else %}
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm text-center">
+  <p class="text-ink">Aún no hay movimientos.</p>
+  <a href="/banco" class="text-primary font-medium underline">Sube tus estados de cuenta</a>
+</div>
+{% endif %}
+{% endblock %}

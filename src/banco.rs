@@ -285,7 +285,7 @@ struct PedidoOllama<'a> {
     model: &'a str,
     prompt: String,
     stream: bool,
-    format: &'a str,
+    // Sin `format: "json"`: gemma4 en Ollama 0.40 responde "structured output is unavailable".
     think: bool,
 }
 #[derive(Deserialize)]
@@ -302,9 +302,30 @@ fn monto_str(s: Option<String>) -> Option<Decimal> {
     Decimal::from_str(&limpio).ok()
 }
 
-async fn extraer_llm(st: &AppState, texto: &str) -> Result<Vec<Movimiento>, AppError> {
+/// Manda un prompt a Ollama y regresa su respuesta (JSON en texto).
+pub async fn ollama_json(st: &AppState, prompt: String) -> Result<String, AppError> {
     let url = crate::var("OLLAMA_URL", "http://localhost:11434");
     let modelo = crate::var("OLLAMA_MODEL", "gemma4");
+    let r = st
+        .http
+        .post(format!("{url}/api/generate"))
+        .json(&PedidoOllama { model: &modelo, prompt, stream: false, think: false })
+        .send()
+        .await
+        .map_err(|_| AppError::usuario("No se pudo contactar a Ollama. ¿Está corriendo?"))?;
+    let cuerpo: RespuestaOllama = r.json().await?;
+    Ok(solo_json(&cuerpo.response).to_string())
+}
+
+/// El objeto JSON dentro de la respuesta del modelo (suele venir entre ```json ... ```).
+fn solo_json(s: &str) -> &str {
+    match (s.find('{'), s.rfind('}')) {
+        (Some(i), Some(f)) if i < f => &s[i..=f],
+        _ => s,
+    }
+}
+
+async fn extraer_llm(st: &AppState, texto: &str) -> Result<Vec<Movimiento>, AppError> {
     let periodo_txt = texto.find("DEL ").map(|i| texto[i..].chars().take(32).collect::<String>()).unwrap_or_default();
     let region = texto.find("Detalle de Movimientos").map(|i| &texto[i..]).unwrap_or(texto);
     let prompt = format!(
@@ -315,15 +336,8 @@ async fn extraer_llm(st: &AppState, texto: &str) -> Result<Vec<Movimiento>, AppE
          - cargo = dinero que salió; abono = dinero que entró. rfc sin espacios o null.\n\n\
          TEXTO:\n{region}",
     );
-    let r = st
-        .http
-        .post(format!("{url}/api/generate"))
-        .json(&PedidoOllama { model: &modelo, prompt, stream: false, format: "json", think: false })
-        .send()
-        .await
-        .map_err(|_| AppError::usuario("No se pudo contactar a Ollama. ¿Está corriendo?"))?;
-    let cuerpo: RespuestaOllama = r.json().await?;
-    let extraido: Extraido = serde_json::from_str(&cuerpo.response)
+    let respuesta = ollama_json(st, prompt).await?;
+    let extraido: Extraido = serde_json::from_str(&respuesta)
         .map_err(|_| AppError::usuario("El modelo no devolvió un JSON válido. Intenta de nuevo."))?;
     let iso = format_description!("[year]-[month]-[day]");
     Ok(extraido
@@ -497,6 +511,10 @@ pub async fn subir(
     }
     if leidos > 0 {
         conciliar(&st.db, id).await?;
+        // Si Ollama no está, los comercios nuevos quedan en "Otros"; no se pierde la subida.
+        if let Err(AppError(_, e)) = crate::gastos::clasificar_pendientes(&st, id).await {
+            eprintln!("gastos: no se clasificó con IA: {e}");
+        }
     }
 
     let mut aviso = format!("{leidos} archivo(s) leído(s), {movimientos} movimientos.");
@@ -665,6 +683,13 @@ mod tests {
         let b = huella_movimientos(&[m(2, "20"), m(1, "10.5")]);
         assert_eq!(a, b);
         assert_ne!(a, huella_movimientos(&[m(1, "10.50")]));
+    }
+
+    #[test]
+    fn json_dentro_de_la_respuesta() {
+        assert_eq!(solo_json("```json\n{\"a\": {\"b\": 1}}\n```"), "{\"a\": {\"b\": 1}}");
+        assert_eq!(solo_json("{\"a\":1}"), "{\"a\":1}");
+        assert_eq!(solo_json("nada"), "nada");
     }
 
     #[test]
