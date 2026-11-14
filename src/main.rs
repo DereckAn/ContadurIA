@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -119,7 +120,7 @@ async fn main() {
         .route("/telegram/vincular", post(telegram::vincular_handler))
         .route("/telegram/probar", post(telegram::probar_handler))
         .route("/banco", get(banco::pagina))
-        .route("/banco/subir", post(banco::subir))
+        .route("/banco/subir", post(banco::subir).layer(DefaultBodyLimit::max(50 * 1024 * 1024)))
         .route("/banco/conciliar", post(banco::conciliar_handler))
         .route("/iva", get(iva::pagina))
         .route("/pagos", get(pagos::pagina))

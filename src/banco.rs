@@ -12,6 +12,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use time::{Date, macros::format_description};
+use tower_sessions::Session;
 use uuid::Uuid;
 
 use crate::{AppError, AppState, auth::Usuario};
@@ -396,43 +397,50 @@ pub async fn conciliar_handler(State(st): State<AppState>, Usuario(id): Usuario)
 
 // --- Handlers ---
 
-pub async fn subir(
-    State(st): State<AppState>,
-    Usuario(id): Usuario,
-    mut mp: Multipart,
-) -> Result<Response, AppError> {
-    let mut pdf = Vec::new();
-    let mut archivo = String::from("estado.pdf");
-    while let Some(campo) = mp.next_field().await.map_err(|_| AppError::usuario("Archivo inválido."))? {
-        if campo.name() == Some("pdf") {
-            if let Some(n) = campo.file_name() {
-                archivo = n.to_string();
-            }
-            pdf = campo.bytes().await.map_err(|_| AppError::usuario("No se pudo leer el archivo."))?.to_vec();
-        }
-    }
-    if pdf.is_empty() {
-        return Err(AppError::usuario("Sube un PDF."));
-    }
+/// Texto canónico de los movimientos de un estado, para detectar re-subidas del mismo estado.
+fn huella_movimientos(movs: &[Movimiento]) -> String {
+    let mut lineas: Vec<String> = movs
+        .iter()
+        .map(|m| format!("{}|{}|{:?}|{:?}", m.fecha, m.descripcion, m.cargo.map(|d| d.normalize()), m.abono.map(|d| d.normalize())))
+        .collect();
+    lineas.sort();
+    lineas.join("\n")
+}
 
-    let texto = texto_pdf(&pdf)?;
+/// Lee un PDF y guarda sus movimientos. Devuelve cuántos guardó.
+async fn guardar_pdf(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Result<usize, AppError> {
+    let texto = texto_pdf(pdf)?;
     let movs = match parsear_bbva(&texto) {
         Some(m) if !m.is_empty() => m,
-        _ => extraer_llm(&st, &texto).await?,
+        _ => extraer_llm(st, &texto).await?,
     };
+    if movs.is_empty() {
+        return Err(AppError::usuario("no se encontraron movimientos"));
+    }
 
-    // Re-subir el mismo archivo reemplaza sus movimientos (idempotente por nombre).
+    // Re-subir el mismo estado reemplaza sus movimientos. La huella sale de los movimientos
+    // leídos, no de los bytes del PDF: el banco genera un PDF distinto en cada descarga.
+    // ponytail: con el respaldo LLM la lectura puede variar entre subidas y no detectar el
+    // duplicado; huella por (cuenta, periodo) si eso pasa.
     let mut tx = st.db.begin().await?;
-    sqlx::query("DELETE FROM movimientos WHERE usuario_id = $1 AND archivo = $2")
+    let (huella,): (String,) = sqlx::query_as("SELECT encode(sha256(convert_to($1, 'UTF8')), 'hex')")
+        .bind(huella_movimientos(&movs))
+        .fetch_one(&mut *tx)
+        .await?;
+    // Filas de antes de 0006 no tienen huella: para ellas se conserva el reemplazo por nombre.
+    sqlx::query(
+        "DELETE FROM movimientos WHERE usuario_id = $1
+           AND (huella = $2 OR (huella IS NULL AND archivo = $3))",
+    )
         .bind(id)
-        .bind(&archivo)
+        .bind(&huella)
+        .bind(archivo)
         .execute(&mut *tx)
         .await?;
-    let mut guardados = 0;
     for m in &movs {
         sqlx::query(
-            "INSERT INTO movimientos (usuario_id, fecha, descripcion, rfc, cargo, abono, archivo)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)",
+            "INSERT INTO movimientos (usuario_id, fecha, descripcion, rfc, cargo, abono, archivo, huella)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
         )
         .bind(id)
         .bind(m.fecha)
@@ -440,14 +448,62 @@ pub async fn subir(
         .bind(&m.rfc)
         .bind(m.cargo)
         .bind(m.abono)
-        .bind(&archivo)
+        .bind(archivo)
+        .bind(&huella)
         .execute(&mut *tx)
         .await?;
-        guardados += 1;
     }
     tx.commit().await?;
-    conciliar(&st.db, id).await?;
-    eprintln!("banco: {guardados} movimientos de {archivo}");
+    Ok(movs.len())
+}
+
+/// Sube uno o varios PDFs. Un archivo que falla no detiene a los demás; el resultado se
+/// muestra como aviso en /banco.
+// ponytail: se leen en serie dentro del request; con muchos PDFs de otros bancos (Ollama)
+// puede tardar minutos. Pasar a tareas.rs en segundo plano si se vuelve molesto.
+pub async fn subir(
+    State(st): State<AppState>,
+    Usuario(id): Usuario,
+    sesion: Session,
+    mut mp: Multipart,
+) -> Result<Response, AppError> {
+    let mut leidos = 0;
+    let mut movimientos = 0;
+    let mut errores = Vec::new();
+    while let Some(campo) = mp
+        .next_field()
+        .await
+        .map_err(|_| AppError::usuario("Archivo inválido o demasiado grande (máx. 50 MB en total)."))?
+    {
+        if campo.name() != Some("pdf") {
+            continue;
+        }
+        let archivo = campo.file_name().unwrap_or("estado.pdf").to_string();
+        let pdf = campo.bytes().await.map_err(|_| AppError::usuario("No se pudo leer el archivo."))?;
+        if pdf.is_empty() {
+            continue; // input vacío
+        }
+        match guardar_pdf(&st, id, &archivo, &pdf).await {
+            Ok(n) => {
+                leidos += 1;
+                movimientos += n;
+                eprintln!("banco: {n} movimientos de {archivo}");
+            }
+            Err(AppError(_, msg)) => errores.push(format!("{archivo}: {msg}")),
+        }
+    }
+    if leidos == 0 && errores.is_empty() {
+        return Err(AppError::usuario("Sube al menos un PDF."));
+    }
+    if leidos > 0 {
+        conciliar(&st.db, id).await?;
+    }
+
+    let mut aviso = format!("{leidos} archivo(s) leído(s), {movimientos} movimientos.");
+    if !errores.is_empty() {
+        aviso.push_str(&format!(" No se pudieron leer: {}", errores.join("; ")));
+    }
+    sesion.insert("aviso_banco", aviso).await?;
     Ok(Redirect::to("/banco").into_response())
 }
 
@@ -485,9 +541,11 @@ pub struct Pagina {
     filas: Vec<Fila>,
     total: i64,
     conciliados: i64,
+    aviso: Option<String>,
 }
 
-pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
+pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario, sesion: Session) -> Result<Pagina, AppError> {
+    let aviso: Option<String> = sesion.remove("aviso_banco").await?;
     let filas = sqlx::query_as(
         "SELECT fecha, descripcion, rfc, cargo, abono, (cfdi_uuid IS NOT NULL) AS conciliado
          FROM movimientos WHERE usuario_id = $1 ORDER BY fecha DESC, id DESC LIMIT 200",
@@ -501,7 +559,7 @@ pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
     .bind(id)
     .fetch_one(&st.db)
     .await?;
-    Ok(Pagina { filas, total, conciliados })
+    Ok(Pagina { filas, total, conciliados, aviso })
 }
 
 #[cfg(test)]
@@ -592,6 +650,21 @@ mod tests {
         for m in movs.iter().take(8) {
             println!("  {} | {:<28} | c {:?} a {:?} | {:?}", m.fecha, m.descripcion, m.cargo, m.abono, m.rfc);
         }
+    }
+
+    #[test]
+    fn huella_ignora_orden_y_formato_del_monto() {
+        let m = |d: u8, c: &str| Movimiento {
+            fecha: Date::from_calendar_date(2026, time::Month::May, d).unwrap(),
+            descripcion: "OXXO".into(),
+            rfc: None,
+            cargo: Some(Decimal::from_str(c).unwrap()),
+            abono: None,
+        };
+        let a = huella_movimientos(&[m(1, "10.50"), m(2, "20.00")]);
+        let b = huella_movimientos(&[m(2, "20"), m(1, "10.5")]);
+        assert_eq!(a, b);
+        assert_ne!(a, huella_movimientos(&[m(1, "10.50")]));
     }
 
     #[test]

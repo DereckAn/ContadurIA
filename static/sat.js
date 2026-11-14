@@ -1,6 +1,19 @@
 // Sincronización con el SAT: la e.firma se abre y firma aquí (WebAssembly);
 // el servidor sólo reenvía al SAT los mensajes ya firmados.
-import init, { Efirma } from "/static/efirma/efirma.js";
+// Import dinámico: si falta el WebAssembly, el submit igual queda interceptado y se muestra
+// el error. Con un import estático todo el módulo fallaba y el navegador mandaba el formulario
+// por GET, con la contraseña de la e.firma en la URL.
+let Efirma = null;
+async function cargarEfirma() {
+  if (Efirma) return;
+  try {
+    const m = await import("/static/efirma/efirma.js");
+    await m.default();
+    Efirma = m.Efirma;
+  } catch {
+    throw new Error("No se encontró el módulo de e.firma (static/efirma). Corre ./build-wasm.sh y recarga.");
+  }
+}
 
 const formulario = document.getElementById("efirma");
 const bitacora = document.getElementById("bitacora");
@@ -77,7 +90,7 @@ async function sincronizar() {
 formulario.addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
-    await init();
+    await cargarEfirma();
     const [cer, key] = await Promise.all([formulario.cer.files[0].arrayBuffer(), formulario.key.files[0].arrayBuffer()]);
     efirma = new Efirma(new Uint8Array(cer), new Uint8Array(key), formulario.contrasena.value);
     formulario.contrasena.value = "";

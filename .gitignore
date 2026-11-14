@@ -3,3 +3,5 @@ static/efirma/
 .env
 /tailwindcss
 styles/.cache
+*.key
+*.cer

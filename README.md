@@ -6,7 +6,8 @@ Contador virtual para personas en México. El plan completo está en [`plan.html
 
 ## Correr en local
 
-Requisitos: Rust 1.85+ y Docker.
+Requisitos: Rust 1.85+, Docker y `pdftotext` para leer estados de cuenta (`brew install poppler`).
+Opcional: [Ollama](https://ollama.com) para estados de bancos distintos de BBVA.
 
 ```bash
 # Postgres (una sola vez; después: docker start contaduria-db)

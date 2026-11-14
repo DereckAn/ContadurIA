@@ -6,11 +6,15 @@
   <p class="text-muted mt-1">Sube tu estado de cuenta en PDF. Se lee en tu propia máquina; nada se envía a internet.</p>
 </div>
 
+{% if let Some(a) = aviso %}
+<div role="status" class="rounded-xl bg-card border border-line p-4 shadow-sm mb-6 text-ink">{{ a }}</div>
+{% endif %}
+
 <div class="rounded-xl bg-card border border-line p-5 shadow-sm mb-6">
   <form method="post" action="/banco/subir" enctype="multipart/form-data" class="flex flex-col sm:flex-row sm:items-end gap-3">
     <label class="flex-1">
-      <span class="text-sm font-medium text-ink">Estado de cuenta (.pdf)</span>
-      <input type="file" name="pdf" accept="application/pdf" required
+      <span class="text-sm font-medium text-ink">Estados de cuenta (.pdf, puedes elegir varios)</span>
+      <input type="file" name="pdf" accept="application/pdf" multiple required
              class="mt-1 block w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-on-primary file:font-semibold">
     </label>
     <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
