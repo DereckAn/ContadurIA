@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Calendario</h1>
+  <p class="text-muted mt-1">En qué días se fue tu dinero y tus fechas con el SAT.</p>
+</div>
+
+<section class="rounded-xl bg-card border border-line p-4 md:p-5 shadow-sm mb-6">
+  <div class="flex items-center justify-between gap-3 mb-4">
+    <a href="?mes={{ anterior }}" class="inline-flex items-center px-2 py-1 rounded border border-line text-ink hover:bg-sand-soft" aria-label="Mes anterior"><span class="material-symbols-outlined text-[18px]">chevron_left</span></a>
+    <div class="text-center">
+      <h2 class="text-lg font-semibold text-ink">{{ titulo }}</h2>
+      <p class="text-sm text-muted tnum">{{ total }} en {{ compras }} compras</p>
+    </div>
+    <a href="?mes={{ siguiente }}" class="inline-flex items-center px-2 py-1 rounded border border-line text-ink hover:bg-sand-soft" aria-label="Mes siguiente"><span class="material-symbols-outlined text-[18px]">chevron_right</span></a>
+  </div>
+
+  {% if let Some((clave, nombre)) = ultimo_con_datos %}
+  <p class="text-sm text-muted mb-3">No hay movimientos este mes. <a href="?mes={{ clave }}" class="text-primary underline">Ir a {{ nombre }}</a>, tu último mes con estados de cuenta.</p>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px" class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1 text-center">
+    <div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sá</div><div>Do</div>
+  </div>
+  {% for semana in semanas %}
+  <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
+    {% for celda in semana %}
+    {% if let Some(d) = celda %}
+    <a href="?mes={{ mes }}&dia={{ d.numero }}#dia"
+       title="{{ d.numero }}: {% if d.compras > 0 %}{{ d.gasto_largo }} en {{ d.compras }} compra(s){% else %}sin gastos{% endif %}{% for o in d.obligaciones %} · {{ o }}{% endfor %}"
+       class="block rounded-lg border {% if d.elegido %}border-primary{% else %}border-line{% endif %} {% if d.hoy %}bg-primary-soft{% else %}bg-surface{% endif %} p-1 hover:border-primary transition-colors overflow-hidden"
+       style="min-height:64px">
+      <div class="flex items-center justify-between">
+        <span class="text-xs {% if d.hoy %}font-bold text-primary{% else %}text-muted{% endif %}">{{ d.numero }}</span>
+        {% if !d.obligaciones.is_empty() %}<span class="material-symbols-outlined text-warn text-[18px]" aria-label="Fecha fiscal">event</span>{% endif %}
+      </div>
+      {% if d.compras > 0 %}
+      <div class="font-semibold tnum text-ink truncate" style="font-size:clamp(10px,2.7vw,12px)">{{ d.gasto }}</div>
+      <div class="w-full rounded-full bg-line overflow-hidden mt-1" style="height:4px">
+        <div class="h-full bg-primary rounded-full" style="width: {{ d.nivel }}%"></div>
+      </div>
+      {% endif %}
+    </a>
+    {% else %}
+    <div></div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <p class="text-xs text-muted mt-3 flex items-start gap-1">
+    <span class="material-symbols-outlined text-[18px]">info</span>
+    <span>Las fechas son las que reporta tu banco: pueden ser uno o dos días después de la compra real. No incluye transferencias ni inversiones. La barrita compara cada día con el de más gasto del mes. <span class="material-symbols-outlined text-warn text-[18px] align-middle">event</span> = fecha fiscal.</span>
+  </p>
+</section>
+
+{% if !dia_titulo.is_empty() %}
+<section id="dia" class="rounded-xl bg-card border border-line p-5 shadow-sm mb-6">
+  <h2 class="text-lg font-semibold text-ink mb-3">{{ dia_titulo }}</h2>
+  {% if dia_compras.is_empty() %}
+  <p class="text-sm text-muted">Sin movimientos este día.</p>
+  {% else %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-muted"><tr>
+        <th class="text-left font-semibold uppercase text-[11px] tracking-wider py-2">Descripción</th>
+        <th class="text-left font-semibold uppercase text-[11px] tracking-wider py-2">Categoría</th>
+        <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Cargo</th>
+        <th class="text-right font-semibold uppercase text-[11px] tracking-wider py-2">Abono</th>
+      </tr></thead>
+      <tbody>
+        {% for c in dia_compras %}
+        <tr class="border-t border-line">
+          <td class="py-2 text-ink">{{ c.descripcion }}</td>
+          <td class="py-2 {% if c.cuenta %}text-ink{% else %}text-muted{% endif %}">{{ c.categoria }}</td>
+          <td class="py-2 text-right tnum">{{ c.cargo }}</td>
+          <td class="py-2 text-right tnum">{{ c.abono }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<h2 class="text-lg font-semibold text-ink mb-2">Próximas obligaciones fiscales</h2>
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Fecha</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Obligación</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Detalle</th>
+    </tr></thead>
+    <tbody>
+      {% for o in obligaciones %}
+      <tr class="border-t border-line">
+        <td class="px-4 py-3 whitespace-nowrap">{{ o.fecha_texto() }}<br><span class="text-xs text-muted">{{ o.faltan_texto() }}</span></td>
+        <td class="px-4 py-3 font-medium text-ink">{{ o.titulo }}</td>
+        <td class="px-4 py-3 text-muted">{{ o.detalle }}</td>
+      </tr>
+      {% else %}
+      <tr class="border-t border-line"><td colspan="3" class="px-4 py-6 text-center text-muted">Sin obligaciones próximas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-xs text-muted mt-3">Si la fecha cae en fin de semana se recorre al siguiente día hábil. Aún no considera días feriados ni los días adicionales por RFC.</p>
+{% endblock %}

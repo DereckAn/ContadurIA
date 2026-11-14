@@ -24,7 +24,7 @@ pub const CATEGORIAS: [&str; 17] = [
 ];
 
 /// Salidas de dinero que no son consumo: se muestran aparte y no cuentan como gasto.
-const NO_CONSUMO: [&str; 2] = ["Transferencias", "Inversión"];
+pub const NO_CONSUMO: [&str; 2] = ["Transferencias", "Inversión"];
 
 /// Reglas por palabra clave, en orden: gana la primera que aparezca en el comercio.
 // ponytail: lista a mano sacada de estados reales; lo que no cubra lo resuelve la IA o el usuario.
@@ -84,6 +84,11 @@ fn por_palabra(comercio: &str) -> Option<&'static str> {
         return Some("Efectivo"); // retiro de efectivo en caja (cashback)
     }
     REGLAS.iter().find(|(_, claves)| claves.iter().any(|k| comercio.contains(k))).map(|(c, _)| *c)
+}
+
+/// Categoría de un movimiento a partir de su descripción del banco.
+pub fn categoria(descripcion: &str, guardadas: &HashMap<String, String>) -> String {
+    categoria_de(&comercio(descripcion), guardadas)
 }
 
 fn categoria_de(comercio: &str, guardadas: &HashMap<String, String>) -> String {
@@ -307,7 +312,7 @@ struct Clasificadas {
     categorias: HashMap<String, String>,
 }
 
-async fn guardadas(st: &AppState, id: Uuid) -> Result<HashMap<String, String>, AppError> {
+pub async fn guardadas(st: &AppState, id: Uuid) -> Result<HashMap<String, String>, AppError> {
     let filas: Vec<(String, String)> =
         sqlx::query_as("SELECT comercio, categoria FROM categorias_comercio WHERE usuario_id = $1")
             .bind(id)
@@ -373,13 +378,18 @@ pub struct Pagina {
     categorias: &'static [&'static str],
 }
 
-pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
+/// Tablero de gastos del usuario (None si no ha subido estados de cuenta).
+pub async fn tablero(st: &AppState, id: Uuid) -> Result<Option<Tablero>, AppError> {
     let movs: Vec<Mov> = sqlx::query_as("SELECT fecha, descripcion, cargo, abono FROM movimientos WHERE usuario_id = $1")
         .bind(id)
         .fetch_all(&st.db)
         .await?;
-    let guardadas = guardadas(&st, id).await?;
-    Ok(Pagina { t: armar(&movs, &guardadas), categorias: &CATEGORIAS })
+    let guardadas = guardadas(st, id).await?;
+    Ok(armar(&movs, &guardadas))
+}
+
+pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
+    Ok(Pagina { t: tablero(&st, id).await?, categorias: &CATEGORIAS })
 }
 
 #[derive(Deserialize)]

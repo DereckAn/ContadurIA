@@ -1,4 +1,5 @@
-//! Panel: salud fiscal de un vistazo (semáforo, KPIs, tope de deducciones y avisos).
+//! Panel (/): todo de un vistazo. Salud fiscal (semáforo, KPIs, tope de deducciones), tu dinero
+//! (gastos, inversiones, banco) y un simulador de cuánto crecería tu inversión.
 
 use askama::Template;
 use askama_web::WebTemplate;
@@ -6,7 +7,7 @@ use axum::{extract::State, response::{IntoResponse, Redirect, Response}};
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use time::Date;
 
-use crate::{AppError, AppState, anual, auth::Usuario, calendario};
+use crate::{AppError, AppState, anual, auth::Usuario, calendario, gastos, inversiones};
 
 fn pesos(n: Decimal) -> String {
     format!("${:.2}", n.round_dp(2))
@@ -48,6 +49,20 @@ pub struct Pagina {
     // Devolución
     mostrar_devolucion: bool,
     devolucion: String,
+    // Tu dinero (None si aún no sube estados de cuenta)
+    gastos: Option<gastos::Tablero>,
+    inversion: Option<Inversion>,
+    movimientos: i64,
+    con_factura: i64,
+    // Simulador: valores iniciales con tus números reales.
+    sim_inicial: i64,
+    sim_mensual: i64,
+}
+
+pub struct Inversion {
+    pub total: String,
+    pub pesos: String,
+    pub dolares: String,
 }
 
 pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Response, AppError> {
@@ -113,6 +128,39 @@ pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
         }
     }
 
+    let passkeys: i64 = sqlx::query_scalar("SELECT count(*) FROM passkeys WHERE usuario_id = $1")
+        .bind(id)
+        .fetch_one(&st.db)
+        .await?;
+    if passkeys < 2 {
+        chips.push(Chip { nivel: "alerta", texto: "Sólo tienes una passkey: agrega otra en Seguridad para no perder tu cuenta.".into() });
+    }
+    let sat_en_proceso: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM sat_solicitudes WHERE usuario_id = $1 AND estado IN ('solicitada', 'lista')",
+    )
+    .bind(id)
+    .fetch_one(&st.db)
+    .await?;
+    if sat_en_proceso > 0 {
+        chips.push(Chip { nivel: "info", texto: format!("El SAT tiene {sat_en_proceso} descarga(s) de CFDI pendientes: vuelve a sincronizar.") });
+    }
+
+    // --- Tu dinero ---
+    let gastos = gastos::tablero(&st, id).await?;
+    let resumen = inversiones::resumen(&st.db, id).await?;
+    let (movimientos, con_factura): (i64, i64) =
+        sqlx::query_as("SELECT count(*), count(cfdi_uuid) FROM movimientos WHERE usuario_id = $1")
+            .bind(id)
+            .fetch_one(&st.db)
+            .await?;
+    let inversion = resumen.as_ref().map(|r| Inversion {
+        total: gastos::pesos(r.total_mxn()),
+        pesos: gastos::pesos(r.valor_mxn),
+        dolares: if r.valor_usd.is_zero() { String::new() } else { format!("US${:.2}", r.valor_usd.round_dp(2)) },
+    });
+    let sim_inicial = resumen.as_ref().map_or(10_000, |r| r.total_mxn().round().to_i64().unwrap_or(0));
+    let sim_mensual = resumen.as_ref().map_or(1_000, |r| r.aportacion_mensual.to_i64().unwrap_or(0));
+
     // --- KPIs ---
     let (resultado_label, resultado_monto) = if c.resultado < Decimal::ZERO {
         ("Saldo a favor".to_string(), pesos(-c.resultado))
@@ -145,6 +193,12 @@ pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<
         tope_pct,
         mostrar_devolucion: c.resultado < Decimal::ZERO,
         devolucion: pesos(-c.resultado),
+        gastos,
+        inversion,
+        movimientos,
+        con_factura,
+        sim_inicial,
+        sim_mensual,
     }
     .into_response())
 }

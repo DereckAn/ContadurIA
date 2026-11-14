@@ -1,3 +1,4 @@
+mod agenda;
 mod anual;
 mod auth;
 mod banco;
@@ -104,7 +105,8 @@ async fn main() {
     tokio::spawn(tareas::programador(estado.clone()));
 
     let app = Router::new()
-        .route("/", get(perfil::inicio))
+        .route("/", get(panel::pagina))
+        .route("/calendario", get(agenda::pagina))
         .route("/perfil", get(perfil::ver).post(perfil::guardar))
         .route("/entrar", get(auth::pagina))
         .route("/salir", post(auth::salir))
@@ -118,7 +120,6 @@ async fn main() {
         .route("/auth/registro/fin", post(auth::registro_fin))
         .route("/auth/acceso/inicio", post(auth::acceso_inicio))
         .route("/auth/acceso/fin", post(auth::acceso_fin))
-        .route("/panel", get(panel::pagina))
         .route("/resumen", get(resumen::pagina))
         .route("/anual", get(anual::pagina))
         .route("/anual/expediente", get(anual::expediente))

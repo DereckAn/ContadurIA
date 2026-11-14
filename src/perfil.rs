@@ -1,4 +1,4 @@
-//! Perfil fiscal del usuario y página de inicio con su calendario.
+//! Perfil fiscal del usuario.
 
 use askama::Template;
 use askama_web::WebTemplate;
@@ -15,7 +15,7 @@ use uuid::Uuid;
 use crate::{
     AppError, AppState,
     auth::Usuario,
-    calendario::{Obligacion, REGIMENES, obligaciones},
+    calendario::REGIMENES,
 };
 
 #[derive(sqlx::FromRow, Default)]
@@ -41,22 +41,6 @@ async fn cargar(db: &PgPool, id: Uuid) -> sqlx::Result<Option<Perfil>> {
         .bind(id)
         .fetch_optional(db)
         .await
-}
-
-#[derive(Template, WebTemplate)]
-#[template(path = "inicio.html")]
-pub struct Inicio {
-    nombre: String,
-    obligaciones: Vec<Obligacion>,
-}
-
-pub async fn inicio(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Response, AppError> {
-    let Some(p) = cargar(&st.db, id).await? else {
-        return Ok(Redirect::to("/perfil").into_response());
-    };
-    let hoy = crate::ahora_mx().date();
-    let obligaciones = obligaciones(&p.regimenes, p.efirma_vence, hoy, 90);
-    Ok(Inicio { nombre: p.nombre, obligaciones }.into_response())
 }
 
 #[derive(Template, WebTemplate)]

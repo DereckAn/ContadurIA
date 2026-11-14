@@ -193,6 +193,55 @@ pub async fn guardar(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Resu
     Ok(format!("{} ({}) {}/{}", e.contrato, e.moneda, e.periodo.month() as u8, e.periodo.year()))
 }
 
+// ---------- Resumen para el panel ----------
+
+pub struct Resumen {
+    pub valor_mxn: Decimal,
+    pub valor_usd: Decimal,
+    /// Tipo de cambio promedio de tus compras de dólares (para estimar la cuenta en USD en pesos).
+    pub tipo_cambio: Option<Decimal>,
+    /// Depósitos promedio al mes en tus contratos en pesos.
+    pub aportacion_mensual: Decimal,
+}
+
+impl Resumen {
+    /// Todo en pesos: la cuenta en dólares al tipo de cambio de tus compras.
+    pub fn total_mxn(&self) -> Decimal {
+        self.valor_mxn + self.valor_usd * self.tipo_cambio.unwrap_or_default()
+    }
+}
+
+/// None si no ha subido estados de inversión.
+pub async fn resumen(db: &sqlx::PgPool, id: Uuid) -> Result<Option<Resumen>, AppError> {
+    let (meses, entradas, usd, mxn): (i64, Decimal, Decimal, Decimal) = sqlx::query_as(
+        "SELECT count(DISTINCT periodo) FILTER (WHERE moneda = 'MXN'),
+                COALESCE(sum(entradas) FILTER (WHERE moneda = 'MXN'), 0),
+                COALESCE(sum(dolares_usd), 0), COALESCE(sum(dolares_mxn), 0)
+         FROM inversiones WHERE usuario_id = $1",
+    )
+    .bind(id)
+    .fetch_one(db)
+    .await?;
+    let valores: Vec<(String, Decimal)> = sqlx::query_as(
+        "SELECT moneda, sum(valor_final) FROM (
+            SELECT DISTINCT ON (contrato) moneda, valor_final FROM inversiones
+            WHERE usuario_id = $1 ORDER BY contrato, periodo DESC) u GROUP BY moneda",
+    )
+    .bind(id)
+    .fetch_all(db)
+    .await?;
+    if valores.is_empty() {
+        return Ok(None);
+    }
+    let valor = |m: &str| valores.iter().find(|v| v.0 == m).map(|v| v.1).unwrap_or_default();
+    Ok(Some(Resumen {
+        valor_mxn: valor("MXN"),
+        valor_usd: valor("USD"),
+        tipo_cambio: (!usd.is_zero()).then(|| (mxn / usd).round_dp(2)),
+        aportacion_mensual: if meses > 0 { (entradas / Decimal::from(meses)).round_dp(0) } else { Decimal::ZERO },
+    }))
+}
+
 // ---------- Página ----------
 
 #[derive(sqlx::FromRow)]
