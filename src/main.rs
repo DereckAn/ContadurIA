@@ -6,6 +6,7 @@ mod cfdi;
 mod discrepancias;
 mod fiscal;
 mod gastos;
+mod inversiones;
 mod informe;
 mod iva;
 mod pagos;
@@ -126,6 +127,7 @@ async fn main() {
         .route("/gastos", get(gastos::pagina))
         .route("/gastos/categoria", post(gastos::cambiar))
         .route("/gastos/clasificar", post(gastos::clasificar))
+        .route("/inversiones", get(inversiones::pagina))
         .route("/iva", get(iva::pagina))
         .route("/pagos", get(pagos::pagina))
         .route("/discrepancias", get(discrepancias::pagina))

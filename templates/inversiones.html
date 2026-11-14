@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Inversiones</h1>
+  <p class="text-muted mt-1">Tus estados de cuenta de GBM. Súbelos en <a href="/banco" class="text-primary underline">Banco</a>, junto con los del banco; se reconocen solos.</p>
+</div>
+
+{% if filas.is_empty() %}
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm text-center">
+  <p class="text-ink">Aún no hay estados de inversión.</p>
+  <a href="/banco" class="text-primary font-medium underline">Sube tus estados de GBM</a>
+</div>
+{% else %}
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm border-t-2 border-t-primary">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Valor actual</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">savings</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ valor_actual }}</div>
+    <div class="text-sm text-muted mt-1">Has depositado {{ aportado }}</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Intereses ganados</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">trending_up</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ intereses }}</div>
+    <div class="text-sm text-muted mt-1">Antes de impuestos</div>
+  </div>
+  <div class="rounded-xl bg-card border border-line p-5 shadow-sm">
+    <div class="flex items-center justify-between">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">ISR que te retuvieron</span>
+      <span class="material-symbols-outlined text-primary text-[18px]">account_balance</span>
+    </div>
+    <div class="text-3xl font-bold tnum mt-2 text-ink">{{ isr }}</div>
+    <div class="text-sm text-muted mt-1">Lo puedes acreditar en tu declaración anual</div>
+  </div>
+</section>
+
+<div class="rounded-xl bg-primary-soft border border-line border-l-4 border-l-primary p-4 mb-6 text-sm text-ink space-y-2">
+  <p><strong>¿Te pueden devolver ese ISR?</strong> GBM retiene ISR sobre el dinero invertido aunque tu interés real (lo que ganaste por encima de la inflación) sea casi cero. Al presentar tu declaración anual, ese ISR retenido se resta de tu impuesto; si te retuvieron de más, sale saldo a favor.</p>
+  <p class="text-muted">El monto exacto de interés real lo trae la <strong>constancia fiscal anual</strong> de GBM (sale en febrero o marzo). Súbela cuando la tengas.</p>
+</div>
+
+{% if hay_dolares %}
+<div class="rounded-xl bg-warn-soft border border-line border-l-4 border-l-warn p-4 mb-6 text-sm text-ink">
+  <strong>Compraste {{ dolares_usd }} USD por {{ dolares_mxn }}.</strong>
+  Esos dólares salieron de este contrato y no aparecen en estos estados; probablemente están en tu cuenta de acciones de EE. UU. Sube también ese estado para ver tu portafolio completo.
+</div>
+{% endif %}
+
+<div class="overflow-x-auto rounded-xl border border-line bg-card">
+  <table class="w-full text-sm">
+    <thead class="bg-surface text-muted"><tr>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Mes</th>
+      <th class="text-left font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Contrato</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Inicio</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Depósitos</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Salidas</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Intereses</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">ISR retenido</th>
+      <th class="text-right font-semibold uppercase text-[11px] tracking-wider px-4 py-3">Cierre</th>
+    </tr></thead>
+    <tbody>
+      {% for f in filas %}
+      <tr class="border-t border-line">
+        <td class="px-4 py-3 whitespace-nowrap">{{ f.mes() }}</td>
+        <td class="px-4 py-3 font-mono text-xs">{{ f.contrato }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.valor_inicial() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.entradas() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.salidas() }}{% if !f.dolares().is_empty() %}<div class="text-xs text-muted">{{ f.dolares() }}</div>{% endif %}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.intereses() }}</td>
+        <td class="px-4 py-3 text-right tnum">{{ f.isr() }}</td>
+        <td class="px-4 py-3 text-right tnum font-semibold">{{ f.valor_final() }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

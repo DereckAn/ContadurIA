@@ -30,12 +30,13 @@ const MESES: [&str; 12] = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO
 
 // --- Utilidades de texto ---
 
-/// Corre pdftotext sobre los bytes del PDF y regresa el texto con el layout conservado.
+/// Corre pdftotext sobre los bytes del PDF. `modo`: "-layout" (conserva columnas, para bancos)
+/// o "-raw" (orden del contenido, para GBM).
 // ponytail: dependemos del binario pdftotext (poppler); una lib de Rust sería más código por nada.
-fn texto_pdf(pdf: &[u8]) -> Result<String, AppError> {
+pub fn texto_pdf(pdf: &[u8], modo: &str) -> Result<String, AppError> {
     let ruta = std::env::temp_dir().join(format!("contaduria-{}.pdf", uuid::Uuid::new_v4()));
     std::fs::write(&ruta, pdf)?;
-    let salida = Command::new("pdftotext").arg("-layout").arg(&ruta).arg("-").output();
+    let salida = Command::new("pdftotext").arg(modo).arg(&ruta).arg("-").output();
     let _ = std::fs::remove_file(&ruta);
     let salida = salida.map_err(|_| AppError::usuario("No se pudo leer el PDF (falta pdftotext)."))?;
     if !salida.status.success() {
@@ -421,12 +422,11 @@ fn huella_movimientos(movs: &[Movimiento]) -> String {
     lineas.join("\n")
 }
 
-/// Lee un PDF y guarda sus movimientos. Devuelve cuántos guardó.
-async fn guardar_pdf(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Result<usize, AppError> {
-    let texto = texto_pdf(pdf)?;
-    let movs = match parsear_bbva(&texto) {
+/// Lee el texto de un estado bancario y guarda sus movimientos. Devuelve cuántos guardó.
+async fn guardar_pdf(st: &AppState, id: Uuid, archivo: &str, texto: &str) -> Result<usize, AppError> {
+    let movs = match parsear_bbva(texto) {
         Some(m) if !m.is_empty() => m,
-        _ => extraer_llm(st, &texto).await?,
+        _ => extraer_llm(st, texto).await?,
     };
     if movs.is_empty() {
         return Err(AppError::usuario("no se encontraron movimientos"));
@@ -483,6 +483,7 @@ pub async fn subir(
 ) -> Result<Response, AppError> {
     let mut leidos = 0;
     let mut movimientos = 0;
+    let mut inversiones: Vec<String> = Vec::new();
     let mut errores = Vec::new();
     while let Some(campo) = mp
         .next_field()
@@ -497,19 +498,26 @@ pub async fn subir(
         if pdf.is_empty() {
             continue; // input vacío
         }
-        match guardar_pdf(&st, id, &archivo, &pdf).await {
-            Ok(n) => {
-                leidos += 1;
+        // Los estados de GBM se reconocen y van a inversiones; el resto, a movimientos del banco.
+        let resultado = match texto_pdf(&pdf, "-layout") {
+            Ok(t) if crate::inversiones::es_gbm(&t) => {
+                crate::inversiones::guardar(&st, id, &archivo, &pdf).await.map(|e| inversiones.push(e))
+            }
+            Ok(t) => guardar_pdf(&st, id, &archivo, &t).await.map(|n| {
                 movimientos += n;
                 eprintln!("banco: {n} movimientos de {archivo}");
-            }
+            }),
+            Err(e) => Err(e),
+        };
+        match resultado {
+            Ok(()) => leidos += 1,
             Err(AppError(_, msg)) => errores.push(format!("{archivo}: {msg}")),
         }
     }
     if leidos == 0 && errores.is_empty() {
         return Err(AppError::usuario("Sube al menos un PDF."));
     }
-    if leidos > 0 {
+    if movimientos > 0 {
         conciliar(&st.db, id).await?;
         // Si Ollama no está, los comercios nuevos quedan en "Otros"; no se pierde la subida.
         if let Err(AppError(_, e)) = crate::gastos::clasificar_pendientes(&st, id).await {
@@ -518,6 +526,9 @@ pub async fn subir(
     }
 
     let mut aviso = format!("{leidos} archivo(s) leído(s), {movimientos} movimientos.");
+    if !inversiones.is_empty() {
+        aviso.push_str(&format!(" Estados de inversión: {}.", inversiones.join(", ")));
+    }
     if !errores.is_empty() {
         aviso.push_str(&format!(" No se pudieron leer: {}", errores.join("; ")));
     }
@@ -660,7 +671,7 @@ mod tests {
     fn real() {
         let ruta = std::env::var("BANCO_PDF").expect("define BANCO_PDF");
         let pdf = std::fs::read(&ruta).unwrap();
-        let texto = texto_pdf(&pdf).ok().unwrap();
+        let texto = texto_pdf(&pdf, "-layout").ok().unwrap();
         let movs = parsear_bbva(&texto).expect("no parseó");
         let cargos: Decimal = movs.iter().filter_map(|m| m.cargo).sum();
         let abonos: Decimal = movs.iter().filter_map(|m| m.abono).sum();

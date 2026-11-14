@@ -104,7 +104,7 @@ pub struct Mov {
     abono: Option<Decimal>,
 }
 
-fn pesos(n: Decimal) -> String {
+pub fn pesos(n: Decimal) -> String {
     let s = format!("{:.0}", n.round_dp(0));
     let (signo, dig) = s.strip_prefix('-').map_or(("", s.as_str()), |d| ("-", d));
     let mut out = String::new();
