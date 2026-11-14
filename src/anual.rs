@@ -69,6 +69,9 @@ pub struct Pagina {
     anio: i32,
     sin_tabla: bool,
     ingreso: String,
+    intereses: String,
+    isr_intereses: String,
+    hay_intereses: bool,
     deducciones: String,
     tope: String,
     tope_restante: String,
@@ -102,6 +105,11 @@ pub struct Calculo {
     pub anio: i32,
     pub sin_tabla: bool,
     pub ingreso: Decimal,
+    /// Intereses de inversiones (GBM). Nominales: el interés real que pide la ley es menor, pero
+    /// sólo lo da la constancia anual. Usar el nominal sobreestima el impuesto (estimación prudente).
+    pub intereses: Decimal,
+    /// ISR que retuvieron las casas de bolsa sobre esos intereses; se acredita.
+    pub isr_intereses: Decimal,
     pub deducciones: Decimal,
     pub tope: Decimal,
     pub base: Decimal,
@@ -143,9 +151,19 @@ pub async fn calcular(db: &sqlx::PgPool, id: uuid::Uuid, anio: i32) -> Result<(C
     .await?;
     let suma_deducibles: Decimal = filas.iter().map(|(_, _, m)| *m).sum();
 
-    let tope = fiscal::tope_deducciones(ingreso);
+    // Intereses de inversiones en pesos (las cuentas en dólares no retienen ISR mexicano).
+    let (intereses, isr_intereses): (Decimal, Decimal) = sqlx::query_as(
+        "SELECT COALESCE(SUM(intereses),0), COALESCE(SUM(isr_retenido),0) FROM inversiones
+         WHERE usuario_id = $1 AND moneda = 'MXN' AND EXTRACT(YEAR FROM periodo) = $2",
+    )
+    .bind(id)
+    .bind(anio)
+    .fetch_one(db)
+    .await?;
+
+    let tope = fiscal::tope_deducciones(ingreso + intereses);
     let deducciones = suma_deducibles.min(tope);
-    let base = (ingreso - deducciones).max(Decimal::ZERO);
+    let base = (ingreso + intereses - deducciones).max(Decimal::ZERO);
     let (isr_causado, sin_tabla) = match fiscal::isr_anual(anio, base) {
         Some(v) => (v, false),
         None => (Decimal::ZERO, true),
@@ -156,13 +174,15 @@ pub async fn calcular(db: &sqlx::PgPool, id: uuid::Uuid, anio: i32) -> Result<(C
             anio,
             sin_tabla,
             ingreso,
+            intereses,
+            isr_intereses,
             deducciones,
             tope,
             base,
             isr_causado,
             subsidio,
             retenido,
-            resultado: isr_causado - subsidio - retenido,
+            resultado: isr_causado - subsidio - retenido - isr_intereses,
         },
         filas,
     ))
@@ -205,9 +225,9 @@ pub async fn pagina(
     let (mut sim_a_favor, mut sim_a_cargo, mut sim_ahorro) = (String::new(), String::new(), String::new());
     if sim_mostrar {
         let nueva_ded = (c.deducciones + sim).min(c.tope);
-        let nueva_base = (c.ingreso - nueva_ded).max(Decimal::ZERO);
+        let nueva_base = (c.ingreso + c.intereses - nueva_ded).max(Decimal::ZERO);
         let nuevo_isr = fiscal::isr_anual(anio, nueva_base).unwrap_or(c.isr_causado);
-        let nuevo_resultado = nuevo_isr - c.subsidio - c.retenido;
+        let nuevo_resultado = nuevo_isr - c.subsidio - c.retenido - c.isr_intereses;
         let (f, cg) = favor_cargo(nuevo_resultado);
         sim_a_favor = f;
         sim_a_cargo = cg;
@@ -228,9 +248,9 @@ pub async fn pagina(
     if proy_mostrar {
         let factor = Decimal::from(12) / Decimal::from(meses);
         let ingreso_a = (c.ingreso * factor).round_dp(2);
-        let base_a = (ingreso_a - c.deducciones).max(Decimal::ZERO);
+        let base_a = (ingreso_a + c.intereses - c.deducciones).max(Decimal::ZERO);
         let isr_a = fiscal::isr_anual(anio, base_a).unwrap_or(Decimal::ZERO);
-        let resultado_a = isr_a - c.subsidio * factor - c.retenido * factor;
+        let resultado_a = isr_a - c.subsidio * factor - c.retenido * factor - c.isr_intereses;
         let (f, cg) = favor_cargo(resultado_a);
         proy_ingreso = pesos(ingreso_a);
         proy_a_favor = f;
@@ -241,6 +261,9 @@ pub async fn pagina(
         anio,
         sin_tabla: c.sin_tabla,
         ingreso: pesos(c.ingreso),
+        intereses: pesos(c.intereses),
+        isr_intereses: pesos(c.isr_intereses),
+        hay_intereses: !c.intereses.is_zero() || !c.isr_intereses.is_zero(),
         deducciones: pesos(c.deducciones),
         tope: pesos(c.tope),
         tope_restante: pesos(tope_restante),
@@ -279,16 +302,19 @@ fn resumen_texto(c: &Calculo) -> String {
         "EXPEDIENTE DE DECLARACIÓN ANUAL {anio}\n\
          (Estimación de ContadurIA. No es un cálculo oficial; verifica en el SAT.)\n\n\
          Ingresos por sueldos (gravado): {ing}\n\
+         Intereses de inversiones:       {int}   (nominales; el real de la constancia anual es menor)\n\
          Deducciones personales:         {ded}   (tope de ley: {tope})\n\
          Base gravable:                  {base}\n\
          ISR causado (tarifa anual):     {isr}\n\
          Subsidio al empleo:             {sub}\n\
          ISR retenido por el patrón:     {ret}\n\
+         ISR retenido por inversiones:   {isr_int}\n\
          -----------------------------------------\n\
          {resultado}\n\n\
          Tarifa anual 2026: Anexo 8 RMF 2026 (DOF 28-dic-2025). UMA 2026: INEGI.\n",
         anio = c.anio, ing = pesos(c.ingreso), ded = pesos(c.deducciones), tope = pesos(c.tope),
         base = pesos(c.base), isr = pesos(c.isr_causado), sub = pesos(c.subsidio), ret = pesos(c.retenido),
+        int = pesos(c.intereses), isr_int = pesos(c.isr_intereses),
     )
 }
 

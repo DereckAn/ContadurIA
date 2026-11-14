@@ -14,11 +14,13 @@
   <table class="w-full text-sm">
     <tbody>
       <tr class="border-b border-line"><td class="px-4 py-3">Ingresos por sueldos (gravado)</td><td class="px-4 py-3 text-right tnum">{{ ingreso }}</td></tr>
+      {% if hay_intereses %}<tr class="border-b border-line"><td class="px-4 py-3">+ Intereses de inversiones <span class="text-muted text-xs">(nominales, de tus estados de <a href="/inversiones" class="underline">GBM</a>)</span></td><td class="px-4 py-3 text-right tnum">{{ intereses }}</td></tr>{% endif %}
       <tr class="border-b border-line"><td class="px-4 py-3">− Deducciones personales <span class="text-muted text-xs">(tope {{ tope }})</span></td><td class="px-4 py-3 text-right tnum">{{ deducciones }}</td></tr>
       <tr class="border-b border-line bg-surface"><td class="px-4 py-3 font-semibold">Base gravable</td><td class="px-4 py-3 text-right tnum font-semibold">{{ base }}</td></tr>
       <tr class="border-b border-line"><td class="px-4 py-3">ISR causado (tarifa anual)</td><td class="px-4 py-3 text-right tnum">{{ isr_causado }}</td></tr>
       <tr class="border-b border-line"><td class="px-4 py-3">− Subsidio al empleo</td><td class="px-4 py-3 text-right tnum">{{ subsidio }}</td></tr>
-      <tr><td class="px-4 py-3">− ISR retenido por tu patrón</td><td class="px-4 py-3 text-right tnum">{{ retenido }}</td></tr>
+      <tr{% if hay_intereses %} class="border-b border-line"{% endif %}><td class="px-4 py-3">− ISR retenido por tu patrón</td><td class="px-4 py-3 text-right tnum">{{ retenido }}</td></tr>
+      {% if hay_intereses %}<tr><td class="px-4 py-3">− ISR retenido por tus inversiones</td><td class="px-4 py-3 text-right tnum">{{ isr_intereses }}</td></tr>{% endif %}
     </tbody>
   </table>
 </div>
@@ -32,6 +34,7 @@
 <details class="rounded-xl bg-card border border-line p-4 mb-6">
   <summary class="cursor-pointer font-semibold text-ink">¿Qué significa esto?</summary>
   <p class="text-sm text-muted mt-2">Tu <strong>ISR causado</strong> es el impuesto que te toca por tus ingresos del año, según la tarifa oficial. Durante el año tu patrón ya te fue reteniendo ISR. Si te retuvieron más de lo que te tocaba, la diferencia es tu <strong>saldo a favor</strong>; si retuvieron de menos, queda <strong>a cargo</strong>. Las <strong>deducciones personales</strong> (médicos, colegiaturas, PPR…) bajan la base del impuesto, hasta un tope de ley.</p>
+  {% if hay_intereses %}<p class="text-sm text-muted mt-2">Tus <strong>intereses</strong> se suman como ingreso y el ISR que te retuvo la casa de bolsa se resta. Usamos el interés <em>nominal</em> de tus estados mensuales; la ley grava sólo el <em>real</em> (descontando inflación), que viene en la constancia fiscal anual de GBM y casi siempre es menor. Por eso tu saldo a favor real puede ser un poco mayor que este.</p>{% endif %}
 </details>
 
 {% if proy_mostrar %}

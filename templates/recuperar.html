@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block chrome %}{% endblock %}
+{% block layout %}{% endblock %}
+{% block topbar %}{% endblock %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<div class="min-h-screen flex items-center justify-center -m-4 md:-m-8">
+  <div class="w-full max-w-md rounded-xl bg-card border border-line shadow-sm p-8">
+    <div class="flex items-center gap-2 mb-6">
+      <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+      <span class="text-xl font-bold text-primary tracking-tight">ContadurIA</span>
+    </div>
+    <h1 class="text-2xl font-bold text-ink mb-1">Recuperar cuenta</h1>
+
+    {% if estado == "pedir" %}
+    <p class="text-sm text-muted mb-6">Te mandamos un enlace a tu correo para crear una passkey nueva.</p>
+    <form method="post" action="/recuperar" class="space-y-4">
+      <label class="block">
+        <span class="text-sm font-medium text-ink">Correo de tu cuenta</span>
+        <input type="email" name="correo" required autocomplete="username"
+               class="mt-1 w-full px-3 py-2 rounded border border-line bg-card text-ink focus:outline-none focus:border-primary">
+      </label>
+      <button type="submit" class="w-full py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">Enviar enlace</button>
+    </form>
+
+    {% else if estado == "enviado" %}
+    <p class="text-sm text-ink mb-4">Si ese correo tiene cuenta, te llegará un enlace en unos minutos. Vale 15 minutos y sirve una sola vez.</p>
+    <p class="text-sm text-muted">Revisa también tu carpeta de spam.</p>
+
+    {% else if estado == "crear" %}
+    <p class="text-sm text-muted mb-6">Crea una passkey nueva en este dispositivo para entrar. Tus passkeys anteriores siguen activas; quítalas en Seguridad si las perdiste.</p>
+    <button id="agregar-passkey" type="button" data-destino="/seguridad"
+            class="w-full py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">Crear passkey y entrar</button>
+    <p id="mensaje" role="alert" class="text-sm text-danger mt-4"></p>
+    <script src="/static/passkey.js"></script>
+
+    {% else %}
+    <p class="text-sm text-ink mb-4">El enlace ya se usó o expiró.</p>
+    <a href="/recuperar" class="text-primary font-medium underline">Pedir otro enlace</a>
+    {% endif %}
+
+    <p class="text-sm mt-4"><a href="/entrar" class="text-primary underline">Volver a entrar</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,5 +1,7 @@
-//! Estados de cuenta de inversión (GBM). Se suben por /banco junto con los del banco:
-//! si el PDF es de GBM, se lee aquí y se guarda su resumen del mes por contrato.
+//! Estados de cuenta de inversión. Se suben por /banco junto con los del banco: si el PDF
+//! es de inversión, se lee aquí y se guarda su resumen del mes por contrato. Formatos:
+//! - GBM (casa de bolsa, pesos): "RESUMEN DEL PORTAFOLIO".
+//! - GBM+ USD (DriveWealth, dólares): "Valuation Summary". Sus montos van en USD.
 //!
 //! Se usa `pdftotext -raw`: los PDF exportados desde el iPhone salen con espacios dentro de
 //! palabras y números en modo -layout ("1 7,0 3 8.5 8"); en -raw salen limpios.
@@ -23,6 +25,7 @@ const MESES: [&str; 12] = [
 #[derive(Debug, PartialEq)]
 pub struct EstadoGbm {
     contrato: String,
+    moneda: &'static str,
     periodo: Date,
     valor_inicial: Decimal,
     valor_final: Decimal,
@@ -34,14 +37,18 @@ pub struct EstadoGbm {
     dolares_mxn: Decimal,
 }
 
-/// ¿Es un estado de cuenta de GBM? Se revisa sin espacios porque -layout los mete dentro de las palabras.
-pub fn es_gbm(texto: &str) -> bool {
+/// ¿Es un estado de inversión? Se revisa sin espacios porque -layout los mete dentro de las palabras.
+pub fn es_inversion(texto: &str) -> bool {
     let c: String = texto.chars().filter(|c| !c.is_whitespace()).collect();
-    c.contains("RESUMENDELPORTAFOLIO") && c.contains("Contrato:")
+    (c.contains("RESUMENDELPORTAFOLIO") && c.contains("Contrato:"))
+        || (c.contains("DriveWealth") && c.contains("ValuationSummary"))
 }
 
-/// "17,041.92" → 17041.92; "(419.78)" → -419.78. Exige punto decimal (descarta folios).
+/// "17,041.92" → 17041.92; "(419.78)" → -419.78; "$260.73" → 260.73. Exige punto decimal
+/// (descarta folios).
 fn monto(t: &str) -> Option<Decimal> {
+    let t = t.replace('$', "");
+    let t = t.as_str();
     let (neg, t) = match t.strip_prefix('(').and_then(|x| x.strip_suffix(')')) {
         Some(x) => (true, x),
         None => (false, t),
@@ -77,8 +84,44 @@ fn periodo(texto: &str) -> Option<Date> {
     Date::from_calendar_date(anio, Month::try_from(mes as u8 + 1).ok()?, 1).ok()
 }
 
-/// Lee el texto (-raw) de un estado mensual de GBM.
+/// Lee el texto (-raw) de un estado mensual de inversión.
 pub fn parsear(texto: &str) -> Option<EstadoGbm> {
+    if texto.contains("DriveWealth") { parsear_usd(texto) } else { parsear_gbm(texto) }
+}
+
+const MONTHS: [&str; 12] = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+];
+
+/// GBM+ USD (DriveWealth). "Valuation Summary": la primera cifra de cada renglón es la del mes.
+/// No trae ISR mexicano retenido: es un broker de EE. UU.
+fn parsear_usd(texto: &str) -> Option<EstadoGbm> {
+    let cifra = |etiqueta: &str| {
+        texto.lines().find(|l| l.starts_with(etiqueta)).and_then(|l| l[etiqueta.len()..].split_whitespace().next()).and_then(monto)
+    };
+    let contrato = texto.split("Account Number:").nth(1)?.split_whitespace().next()?.to_string();
+    // "October 01, 2026 - October 31, 2026"
+    let l = texto.lines().find(|l| MONTHS.iter().any(|m| l.starts_with(m)) && l.contains(" - "))?;
+    let mes = MONTHS.iter().position(|m| l.starts_with(m))?;
+    let anio: i32 = l.split(", ").nth(1)?.get(..4)?.parse().ok()?;
+    Some(EstadoGbm {
+        contrato,
+        moneda: "USD",
+        periodo: Date::from_calendar_date(anio, Month::try_from(mes as u8 + 1).ok()?, 1).ok()?,
+        valor_inicial: cifra("Beginning Account Value ")?,
+        valor_final: cifra("Ending Account Value ")?,
+        entradas: cifra("Deposits ")?,
+        salidas: cifra("Withdrawals ")?,
+        intereses: cifra("Dividend & Interest ")?,
+        isr_retenido: Decimal::ZERO,
+        dolares_usd: Decimal::ZERO,
+        dolares_mxn: Decimal::ZERO,
+    })
+}
+
+/// GBM casa de bolsa (pesos).
+fn parsear_gbm(texto: &str) -> Option<EstadoGbm> {
     let contrato = linea(texto, "Contrato:")?
         .split("Contrato:")
         .nth(1)?
@@ -103,6 +146,7 @@ pub fn parsear(texto: &str) -> Option<EstadoGbm> {
 
     Some(EstadoGbm {
         contrato,
+        moneda: "MXN",
         periodo: periodo(texto)?,
         valor_inicial: *valor.first()?,
         valor_final: *valor.get(1)?,
@@ -117,19 +161,19 @@ pub fn parsear(texto: &str) -> Option<EstadoGbm> {
     })
 }
 
-/// Lee un PDF de GBM y guarda (o reemplaza) el resumen de ese contrato y mes.
+/// Lee un PDF de inversión y guarda (o reemplaza) el resumen de ese contrato y mes.
 pub async fn guardar(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Result<String, AppError> {
     let texto = crate::banco::texto_pdf(pdf, "-raw")?;
-    let e = parsear(&texto).ok_or_else(|| AppError::usuario("parece de GBM, pero no se reconoció el formato"))?;
+    let e = parsear(&texto).ok_or_else(|| AppError::usuario("parece un estado de inversión, pero no se reconoció el formato"))?;
     sqlx::query(
         "INSERT INTO inversiones (usuario_id, contrato, periodo, valor_inicial, valor_final, entradas, salidas,
-                                  intereses, isr_retenido, dolares_usd, dolares_mxn, archivo)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                                  intereses, isr_retenido, dolares_usd, dolares_mxn, archivo, moneda)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT (usuario_id, contrato, periodo) DO UPDATE SET
             valor_inicial = EXCLUDED.valor_inicial, valor_final = EXCLUDED.valor_final,
             entradas = EXCLUDED.entradas, salidas = EXCLUDED.salidas, intereses = EXCLUDED.intereses,
             isr_retenido = EXCLUDED.isr_retenido, dolares_usd = EXCLUDED.dolares_usd,
-            dolares_mxn = EXCLUDED.dolares_mxn, archivo = EXCLUDED.archivo",
+            dolares_mxn = EXCLUDED.dolares_mxn, archivo = EXCLUDED.archivo, moneda = EXCLUDED.moneda",
     )
     .bind(id)
     .bind(&e.contrato)
@@ -143,9 +187,10 @@ pub async fn guardar(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Resu
     .bind(e.dolares_usd)
     .bind(e.dolares_mxn)
     .bind(archivo)
+    .bind(e.moneda)
     .execute(&st.db)
     .await?;
-    Ok(format!("GBM {} {}/{}", e.contrato, e.periodo.month() as u8, e.periodo.year()))
+    Ok(format!("{} ({}) {}/{}", e.contrato, e.moneda, e.periodo.month() as u8, e.periodo.year()))
 }
 
 // ---------- Página ----------
@@ -153,6 +198,7 @@ pub async fn guardar(st: &AppState, id: Uuid, archivo: &str, pdf: &[u8]) -> Resu
 #[derive(sqlx::FromRow)]
 pub struct Fila {
     contrato: String,
+    moneda: String,
     periodo: Date,
     valor_inicial: Decimal,
     valor_final: Decimal,
@@ -168,12 +214,19 @@ impl Fila {
         let m = MESES[self.periodo.month() as usize - 1];
         format!("{}{} {}", &m[..1], m[1..].to_lowercase(), self.periodo.year())
     }
-    pub fn valor_inicial(&self) -> String { pesos(self.valor_inicial) }
-    pub fn valor_final(&self) -> String { pesos(self.valor_final) }
-    pub fn entradas(&self) -> String { pesos(self.entradas) }
-    pub fn salidas(&self) -> String { pesos(self.salidas) }
-    pub fn intereses(&self) -> String { centavos(self.intereses) }
-    pub fn isr(&self) -> String { centavos(self.isr_retenido) }
+    fn dinero(&self, n: Decimal) -> String {
+        if self.moneda == "USD" { dolares(n) } else { pesos(n) }
+    }
+    pub fn valor_inicial(&self) -> String { self.dinero(self.valor_inicial) }
+    pub fn valor_final(&self) -> String { self.dinero(self.valor_final) }
+    pub fn entradas(&self) -> String { self.dinero(self.entradas) }
+    pub fn salidas(&self) -> String { self.dinero(self.salidas) }
+    pub fn intereses(&self) -> String {
+        if self.moneda == "USD" { dolares(self.intereses) } else { centavos(self.intereses) }
+    }
+    pub fn isr(&self) -> String {
+        if self.moneda == "USD" { "—".into() } else { centavos(self.isr_retenido) }
+    }
     pub fn dolares(&self) -> String {
         if self.dolares_usd.is_zero() { String::new() } else { format!("{} USD", self.dolares_usd.normalize()) }
     }
@@ -182,6 +235,10 @@ impl Fila {
 /// Montos chicos (intereses, ISR) con centavos.
 fn centavos(n: Decimal) -> String {
     format!("${:.2}", n.round_dp(2))
+}
+
+fn dolares(n: Decimal) -> String {
+    format!("US${:.2}", n.round_dp(2))
 }
 
 #[derive(Template, WebTemplate)]
@@ -195,40 +252,52 @@ pub struct Pagina {
     dolares_usd: String,
     dolares_mxn: String,
     hay_dolares: bool,
+    // Cuenta en dólares, si se subió su estado.
+    valor_usd: String,
+    depositado_usd: String,
+    hay_cuenta_usd: bool,
 }
 
 pub async fn pagina(State(st): State<AppState>, Usuario(id): Usuario) -> Result<Pagina, AppError> {
     // Los contratos que no se han usado (todo en cero) no se muestran.
     let filas: Vec<Fila> = sqlx::query_as(
-        "SELECT contrato, periodo, valor_inicial, valor_final, entradas, salidas, intereses, isr_retenido, dolares_usd
+        "SELECT contrato, moneda, periodo, valor_inicial, valor_final, entradas, salidas, intereses, isr_retenido, dolares_usd
          FROM inversiones
          WHERE usuario_id = $1 AND (valor_inicial <> 0 OR valor_final <> 0 OR entradas <> 0 OR salidas <> 0)
-         ORDER BY periodo DESC, contrato",
+         ORDER BY periodo DESC, moneda, contrato",
     )
     .bind(id)
     .fetch_all(&st.db)
     .await?;
     let (dolares_usd, dolares_mxn): (Decimal, Decimal) = sqlx::query_as(
-        "SELECT COALESCE(sum(dolares_usd), 0), COALESCE(sum(dolares_mxn), 0) FROM inversiones WHERE usuario_id = $1",
+        "SELECT COALESCE(sum(dolares_usd), 0), COALESCE(sum(dolares_mxn), 0) FROM inversiones WHERE usuario_id = $1 AND moneda = 'MXN'",
     )
     .bind(id)
     .fetch_one(&st.db)
     .await?;
-    // Valor actual = último mes de cada contrato.
-    let valor_actual: Decimal = sqlx::query_scalar(
-        "SELECT COALESCE(sum(valor_final), 0) FROM (
-            SELECT DISTINCT ON (contrato) valor_final FROM inversiones
-            WHERE usuario_id = $1 ORDER BY contrato, periodo DESC) u",
-    )
-    .bind(id)
-    .fetch_one(&st.db)
-    .await?;
-    let suma = |f: fn(&Fila) -> Decimal| filas.iter().map(f).sum::<Decimal>();
+    // Valor actual = último mes de cada contrato, por moneda (pesos y dólares nunca se suman).
+    let actual = |moneda: &'static str| {
+        sqlx::query_scalar::<_, Decimal>(
+            "SELECT COALESCE(sum(valor_final), 0) FROM (
+                SELECT DISTINCT ON (contrato) valor_final FROM inversiones
+                WHERE usuario_id = $1 AND moneda = $2 ORDER BY contrato, periodo DESC) u",
+        )
+        .bind(id)
+        .bind(moneda)
+        .fetch_one(&st.db)
+    };
+    let valor_actual = actual("MXN").await?;
+    let valor_usd = actual("USD").await?;
+    let suma = |moneda: &str, f: fn(&Fila) -> Decimal| filas.iter().filter(|x| x.moneda == moneda).map(f).sum::<Decimal>();
+    let hay_cuenta_usd = filas.iter().any(|x| x.moneda == "USD");
     Ok(Pagina {
         valor_actual: pesos(valor_actual),
-        aportado: pesos(suma(|f| f.entradas)),
-        intereses: centavos(suma(|f| f.intereses)),
-        isr: centavos(suma(|f| f.isr_retenido)),
+        aportado: pesos(suma("MXN", |f| f.entradas)),
+        intereses: centavos(suma("MXN", |f| f.intereses)),
+        isr: centavos(suma("MXN", |f| f.isr_retenido)),
+        valor_usd: dolares(valor_usd),
+        depositado_usd: dolares(suma("USD", |f| f.entradas)),
+        hay_cuenta_usd,
         hay_dolares: !dolares_usd.is_zero(),
         dolares_usd: dolares_usd.normalize().to_string(),
         dolares_mxn: pesos(dolares_mxn),
@@ -263,6 +332,7 @@ DEL 1 AL 31 DE OCTUBRE DE 2026
         let d = |s: &str| Decimal::from_str(s).unwrap();
         assert_eq!(e, EstadoGbm {
             contrato: "GV00XX01".into(),
+            moneda: "MXN",
             periodo: Date::from_calendar_date(2026, Month::October, 1).unwrap(),
             valor_inicial: d("83.55"),
             valor_final: d("17041.92"),
@@ -276,11 +346,36 @@ DEL 1 AL 31 DE OCTUBRE DE 2026
     }
 
     #[test]
-    fn detecta_gbm_aun_con_espacios_de_layout() {
-        assert!(es_gbm("R ES U M E N D EL P O R T A F O LI O\nC o n t ra t o: GV 4 3I H 0 1"));
-        assert!(!es_gbm("Detalle de Movimientos CARGOS ABONOS"));
+    fn detecta_inversion_aun_con_espacios_de_layout() {
+        assert!(es_inversion("R ES U M E N D EL P O R T A F O LI O\nC o n t ra t o: GV 4 3I H 0 1"));
+        assert!(es_inversion("Valuation Summary This Period\nClearing by DriveWealth, LLC"));
+        assert!(!es_inversion("Detalle de Movimientos CARGOS ABONOS"));
         assert_eq!(monto("(419.78)"), Some(Decimal::from_str("-419.78").unwrap()));
         assert_eq!(monto("40480098"), None);
+    }
+
+    #[test]
+    fn lee_estado_usd() {
+        let texto = "\
+Valuation Summary This Period This Year
+Beginning Account Value $574.37 0.00
+Deposits $276.42 $851.85
+Dividend & Interest $0.00 $0.00
+Withdrawals $0.00 $0.00
+Ending Account Value $780.29 $780.29
+Clearing and execution services provided by DriveWealth, LLC member FINRA and SIPC.
+Account Number:GBMP-001-XX0001 Account Name: FULANO DE TAL
+October 01, 2026 - October 31, 2026
+Valuation Summaryprovides a summary which reflects the total value. Ending Account Value is explained here.
+";
+        let e = parsear(texto).expect("debe parsear");
+        assert_eq!(e.contrato, "GBMP-001-XX0001");
+        assert_eq!(e.moneda, "USD");
+        assert_eq!(e.periodo, Date::from_calendar_date(2026, Month::October, 1).unwrap());
+        assert_eq!(e.valor_inicial, Decimal::from_str("574.37").unwrap());
+        assert_eq!(e.valor_final, Decimal::from_str("780.29").unwrap());
+        assert_eq!(e.entradas, Decimal::from_str("276.42").unwrap());
+        assert_eq!(e.isr_retenido, Decimal::ZERO);
     }
 
     // Revisión manual con PDFs reales: GBM_PDF=/ruta.pdf cargo test real_gbm -- --ignored --nocapture

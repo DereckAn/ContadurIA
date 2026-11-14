@@ -167,7 +167,13 @@ fn cuerpo(d: &Datos) -> String {
     )
 }
 
-pub async fn enviar(db: &PgPool, id: Uuid, param: &Option<String>, hoy: Date) -> Result<(), AppError> {
+/// ¿Hay SMTP configurado para mandar correos?
+pub fn hay_correo() -> bool {
+    !var("SMTP_HOST", "").is_empty()
+}
+
+/// Manda un correo HTML con el SMTP de las variables de entorno.
+pub async fn enviar_correo(para: &str, asunto: &str, html: String) -> Result<(), AppError> {
     let host = var("SMTP_HOST", "");
     if host.is_empty() {
         return Err(AppError::usuario("Falta configurar el correo (variables SMTP_HOST, SMTP_USER, SMTP_PASS)."));
@@ -177,13 +183,12 @@ pub async fn enviar(db: &PgPool, id: Uuid, param: &Option<String>, hoy: Date) ->
     let remitente = var("SMTP_FROM", &usuario);
     let puerto: u16 = var("SMTP_PORT", "587").parse().unwrap_or(587);
 
-    let d = reunir(db, id, param, hoy).await?;
     let correo = lettre::Message::builder()
         .from(remitente.parse().map_err(|_| AppError::usuario("SMTP_FROM inválido."))?)
-        .to(d.correo.parse().map_err(|_| AppError::usuario("Tu correo no es válido."))?)
-        .subject(format!("Informe de {}", d.mes_texto))
+        .to(para.parse().map_err(|_| AppError::usuario("Tu correo no es válido."))?)
+        .subject(asunto)
         .header(ContentType::TEXT_HTML)
-        .body(cuerpo(&d))?;
+        .body(html)?;
 
     let transporte = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&host)?
         .port(puerto)
@@ -191,6 +196,11 @@ pub async fn enviar(db: &PgPool, id: Uuid, param: &Option<String>, hoy: Date) ->
         .build();
     transporte.send(correo).await?;
     Ok(())
+}
+
+pub async fn enviar(db: &PgPool, id: Uuid, param: &Option<String>, hoy: Date) -> Result<(), AppError> {
+    let d = reunir(db, id, param, hoy).await?;
+    enviar_correo(&d.correo, &format!("Informe de {}", d.mes_texto), cuerpo(&d)).await
 }
 
 pub async fn enviar_handler(

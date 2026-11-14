@@ -44,12 +44,18 @@
   <p class="text-muted">El monto exacto de interés real lo trae la <strong>constancia fiscal anual</strong> de GBM (sale en febrero o marzo). Súbela cuando la tengas.</p>
 </div>
 
-{% if hay_dolares %}
+{% if hay_cuenta_usd %}
+<div class="rounded-xl bg-card border border-line border-l-4 border-l-primary p-4 mb-6 text-sm text-ink space-y-1">
+  <p><strong>Cuenta en dólares: {{ valor_usd }}</strong> (depositaste {{ depositado_usd }}). No se suma a los pesos de arriba.</p>
+  {% if hay_dolares %}<p class="text-muted">Esos dólares son los {{ dolares_usd }} USD que compraste por {{ dolares_mxn }} desde tu contrato en pesos.</p>{% endif %}
+  <p class="text-muted">Este broker es de EE. UU. y no te retiene ISR en México: si vendes acciones con ganancia o recibes dividendos, eso se declara en tu anual.</p>
+</div>
+{% else %}{% if hay_dolares %}
 <div class="rounded-xl bg-warn-soft border border-line border-l-4 border-l-warn p-4 mb-6 text-sm text-ink">
   <strong>Compraste {{ dolares_usd }} USD por {{ dolares_mxn }}.</strong>
   Esos dólares salieron de este contrato y no aparecen en estos estados; probablemente están en tu cuenta de acciones de EE. UU. Sube también ese estado para ver tu portafolio completo.
 </div>
-{% endif %}
+{% endif %}{% endif %}
 
 <div class="overflow-x-auto rounded-xl border border-line bg-card">
   <table class="w-full text-sm">

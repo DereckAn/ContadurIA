@@ -498,9 +498,9 @@ pub async fn subir(
         if pdf.is_empty() {
             continue; // input vacío
         }
-        // Los estados de GBM se reconocen y van a inversiones; el resto, a movimientos del banco.
+        // Los estados de inversión se reconocen y van a inversiones; el resto, a movimientos del banco.
         let resultado = match texto_pdf(&pdf, "-layout") {
-            Ok(t) if crate::inversiones::es_gbm(&t) => {
+            Ok(t) if crate::inversiones::es_inversion(&t) => {
                 crate::inversiones::guardar(&st, id, &archivo, &pdf).await.map(|e| inversiones.push(e))
             }
             Ok(t) => guardar_pdf(&st, id, &archivo, &t).await.map(|n| {

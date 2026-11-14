@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block mainmod %}{% endblock %}
+{% block contenido %}
+<div class="mb-6">
+  <h1 class="text-2xl md:text-3xl font-bold text-primary tracking-tight">Seguridad</h1>
+  <p class="text-muted mt-1">Entras con passkeys a la cuenta <strong class="text-ink">{{ correo }}</strong>.</p>
+</div>
+
+{% if llaves.len() < 2 %}
+<div class="rounded-xl bg-warn-soft border border-line border-l-4 border-l-warn p-4 mb-6 text-sm text-ink">
+  <strong>Sólo tienes una passkey.</strong> Si pierdes ese dispositivo o borras su gestor de contraseñas, tendrás que recuperar la cuenta por correo. Agrega otra en un segundo dispositivo o gestor.
+</div>
+{% endif %}
+
+<div class="rounded-xl bg-card border border-line p-6 shadow-sm max-w-2xl">
+  <h2 class="text-lg font-semibold text-ink mb-3">Tus passkeys</h2>
+  <ul class="space-y-2 mb-4">
+    {% for l in llaves %}
+    <li class="flex items-center justify-between gap-3 border-b border-line py-2">
+      <span class="flex items-center gap-2 text-ink">
+        <span class="material-symbols-outlined text-primary text-[18px]">key</span>Passkey {{ loop.index }} <span class="text-muted text-sm">· creada el {{ l.fecha() }}</span>
+      </span>
+      {% if llaves.len() > 1 %}
+      <form method="post" action="/seguridad/quitar">
+        <input type="hidden" name="id" value="{{ l.id }}">
+        <button type="submit" class="text-sm text-danger underline bg-transparent">Quitar</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <button id="agregar-passkey" type="button" class="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-primary text-on-primary font-semibold hover:opacity-90 transition">
+    <span class="material-symbols-outlined text-[18px]">add</span>Agregar passkey
+  </button>
+  <p class="text-xs text-muted mt-2">Se guarda en el gestor que elijas (Llavero de iCloud, Chrome, 1Password…). Usa uno distinto al de tu passkey actual.</p>
+  <p id="mensaje" role="alert" class="text-sm text-danger mt-3"></p>
+</div>
+<script src="/static/passkey.js"></script>
+{% endblock %}

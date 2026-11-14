@@ -1,5 +1,6 @@
-// Crear cuenta y entrar con passkey (WebAuthn). Requiere un navegador de 2024 o más nuevo.
+// Passkeys (WebAuthn): crear cuenta, entrar y agregar una passkey más. Requiere un navegador de 2024 o más nuevo.
 const formulario = document.getElementById("acceso");
+const boton = document.getElementById("agregar-passkey");
 const mensaje = document.getElementById("mensaje");
 
 async function enviar(url, cuerpo) {
@@ -12,11 +13,11 @@ async function enviar(url, cuerpo) {
   return r.status === 204 ? null : r.json();
 }
 
-async function registrar(correo) {
-  const reto = await enviar("/auth/registro/inicio", { correo });
+async function crear(inicio, fin, cuerpo) {
+  const reto = await enviar(inicio, cuerpo);
   const publicKey = PublicKeyCredential.parseCreationOptionsFromJSON(reto.publicKey);
   const cred = await navigator.credentials.create({ publicKey });
-  await enviar("/auth/registro/fin", cred.toJSON());
+  await enviar(fin, cred.toJSON());
 }
 
 async function entrar(correo) {
@@ -26,14 +27,32 @@ async function entrar(correo) {
   await enviar("/auth/acceso/fin", cred.toJSON());
 }
 
-formulario.addEventListener("submit", async (e) => {
+function error(err) {
+  if (err.name === "NotAllowedError") return "Se canceló la passkey.";
+  if (err.name === "InvalidStateError") return "Este dispositivo ya tiene una passkey de tu cuenta.";
+  return err.message;
+}
+
+formulario?.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const accion = e.submitter.value === "registro" ? registrar : entrar;
   mensaje.textContent = "";
   try {
-    await accion(formulario.correo.value);
+    const correo = formulario.correo.value;
+    if (e.submitter.value === "registro") await crear("/auth/registro/inicio", "/auth/registro/fin", { correo });
+    else await entrar(correo);
     location.href = "/";
   } catch (err) {
-    mensaje.textContent = err.name === "NotAllowedError" ? "Se canceló la passkey." : err.message;
+    mensaje.textContent = error(err);
+  }
+});
+
+// Botón "agregar passkey" (Seguridad y recuperación de cuenta).
+boton?.addEventListener("click", async () => {
+  mensaje.textContent = "";
+  try {
+    await crear("/auth/agregar/inicio", "/auth/agregar/fin", {});
+    location.href = boton.dataset.destino || location.href;
+  } catch (err) {
+    mensaje.textContent = error(err);
   }
 });
